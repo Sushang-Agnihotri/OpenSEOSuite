@@ -19,7 +19,7 @@ This file separates what has been **verified** from what is **implemented but un
 | I | Content optimisation and AI | Done; AI providers unverified against a live model |
 | J | Search Console and PageSpeed integrations | Implemented; live calls unverified (see below) |
 | K | Monitoring and reporting | Done, tested |
-| L | Security, testing, optimisation, release | Tests and security checks done; Docker build and publication pending |
+| L | Security, testing, optimisation, release | Tests and security checks done; Docker image builds and starts in CI; pushed to a private GitHub repository; public release pending |
 
 ## Verification record
 
@@ -41,6 +41,13 @@ This file separates what has been **verified** from what is **implemented but un
   secret masking, injection payloads, upload type/size limits, login rate limiting, security headers.
 - Database migrations match the models; lint clean (ruff, incl. security rules); TypeScript strict type-check; production build.
 
+### Verified by CI (GitHub Actions run #1, commit 1f6e9fa, all jobs green)
+
+- Backend lint + test suite on Ubuntu (Python 3.11 and 3.12), Windows (3.11) and macOS (3.12). The JavaScript-rendering test is
+  skipped there because Chromium is not installed in CI.
+- Frontend type-check, tests and production build on Ubuntu.
+- `docker build` of the image, then a container started from it answers `/api/health`.
+
 ### Verified manually
 
 - Application started from a clean data directory; first account created; site added; crawl run; all 21 screens opened in a browser
@@ -57,8 +64,7 @@ This file separates what has been **verified** from what is **implemented but un
 | SERP providers (SearXNG, Google Programmable Search, Brave) | No instance or API keys available | Response mapping untested; manual-URL mode is tested |
 | AI providers (Ollama, OpenAI-compatible) | No model server available | Prompt construction is tested; HTTP calls are not |
 | PostgreSQL | Only SQLite was run | Possible dialect differences |
-| macOS / Linux | Developed on Windows only | CI workflow is defined but has never run |
-| Docker image | Docker Desktop could not start on the development machine (the Windows WSL service is disabled). The Dockerfile's steps were reproduced by hand instead: `pip install .` into a clean environment, built frontend copied alongside, server started with `SEO_FRONTEND_DIST`; health, UI and migrations worked. | `docker build` / `docker compose up` themselves have never run; base-image or Linux-specific problems are possible |
+| Docker Compose / container in real use | CI builds the image and checks `/api/health` only. `docker compose up`, the data volume, and using the UI or running a crawl inside the container have not been tried (Docker cannot start on the development machine: WSL service disabled). | Volume permissions or crawl behaviour inside the container could still surprise |
 | Frontend interactions | Screens were loaded and checked for errors; forms/buttons on most screens were not clicked through one by one | UI bugs in less common flows are likely |
 
 ### Not implemented
@@ -70,7 +76,7 @@ Google Trends, Google Business Profile, notifications by e-mail/webhook, URL Ins
 
 | # | Criterion | Status |
 |---|---|---|
-| 1 | Application installs successfully | **Verified** on Windows (venv + npm) |
+| 1 | Application installs successfully | **Verified** on Windows (venv + npm); test suite also passes on Linux and macOS in CI |
 | 2 | Backend runs | **Verified** |
 | 3 | Frontend runs | **Verified** (production build served by the backend) |
 | 4 | Database migrations work | **Verified** (SQLite) |
@@ -82,17 +88,17 @@ Google Trends, Google Business Profile, notifications by e-mail/webhook, URL Ins
 | 10 | Core modules have automated tests | **Verified** |
 | 11 | Security checks completed | **Verified** by tests; no external penetration test |
 | 12 | Documentation complete | **Mostly**: screenshots missing |
-| 13 | Docker deployment works | **Not verified** |
+| 13 | Docker deployment works | **Partly verified**: image builds and serves the health endpoint in CI; `docker compose up` not run |
 | 14 | No critical errors remain | None known; UI flows only partly exercised |
 | 15 | Works without paid API subscriptions | **Verified** |
 
-**Conclusion: not ready for a public release yet.** Criteria 12 and 13 are open, and the unverified integrations above should be
+**Conclusion: not ready for a public release yet.** Criterion 12 is open and 13 is only partly verified, and the unverified integrations above should be
 exercised (or clearly marked experimental in the UI) first.
 
 ## Next steps
 
-1. Start Docker and build/run the image; fix whatever surfaces.
+1. Run `docker compose up` on a machine with a working Docker engine and do a crawl inside the container.
 2. Click through every form in the UI; add frontend tests for the main flows.
 3. Verify PageSpeed (with a free API key), Search Console OAuth, one SERP provider and Ollama.
 4. Crawl a few real public sites of different sizes; tune defaults.
-5. Add screenshots, push to GitHub, let CI run on Linux/macOS.
+5. Add screenshots, then make the GitHub repository public.
