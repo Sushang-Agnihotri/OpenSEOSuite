@@ -1,0 +1,22 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { -webkit-font-smoothing: antialiased; }
+  body { @apply bg-slate-50 dark:bg-slate-950; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { @apply rounded-full bg-slate-300 dark:bg-slate-700; }
+  .recharts-text { @apply fill-slate-500; }
+  .dark .recharts-cartesian-grid line { stroke: #1e293b; }
+}
+
+@layer components {
+  /* Rendered Markdown from the optional AI layer */
+  .prose-ai h1, .prose-ai h2, .prose-ai h3 { @apply mb-1 mt-4 font-semibold text-slate-900 dark:text-slate-100; }
+  .prose-ai p { @apply my-2; }
+  .prose-ai ul { @apply my-2 list-disc pl-5; }
+  .prose-ai ol { @apply my-2 list-decimal pl-5; }
+  .prose-ai code { @apply rounded bg-slate-100 px-1 py-0.5 font-mono text-xs dark:bg-slate-800; }
+  .prose-ai pre { @apply my-2 overflow-x-auto rounded-lg bg-slate-900 p-3 font-mono text-xs text-slate-100; }
+}
