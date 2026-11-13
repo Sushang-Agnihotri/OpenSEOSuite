@@ -23,7 +23,7 @@ This file separates what has been **verified** from what is **implemented but un
 
 ## Verification record
 
-### Verified by automated tests (220 backend tests, 18 frontend tests, all passing on Windows 11 / Python 3.11 / Node 20)
+### Verified by automated tests (221 backend tests, 18 frontend tests, all passing on Windows 11 / Python 3.11 / Node 20)
 
 - Crawl of a local website with ~50 planted problems: each expected rule fires on the expected URL, and healthy pages are not flagged.
 - Redirect chains/loops, broken internal/external links, broken and oversized images, duplicates and near-duplicates, canonicals,

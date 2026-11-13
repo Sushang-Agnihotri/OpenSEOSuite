@@ -84,6 +84,7 @@ class Crawler:
         self.depths: dict[str, int | None] = {}
         self.found_via: dict[str, str] = {}
         self.queue: asyncio.Queue = asyncio.Queue()
+        self._flush_lock = asyncio.Lock()
         self.buffer: list[dict] = []
         self.crawled = 0
         self.limit_hit = False
@@ -265,9 +266,12 @@ class Crawler:
 
     # ------------------------------------------------------------------ persistence
     async def _flush(self) -> None:
-        batch, self.buffer = self.buffer, []
-        if batch:
-            await asyncio.to_thread(self._flush_sync, batch)
+        # Serialised: the final flush after the crawl must wait for a batch a worker is still writing, otherwise
+        # the site-wide analysis can run on a database that is missing that batch (up to FLUSH_EVERY pages).
+        async with self._flush_lock:
+            batch, self.buffer = self.buffer, []
+            if batch:
+                await asyncio.to_thread(self._flush_sync, batch)
 
     def _flush_sync(self, batch: list[dict]) -> None:
         with session_scope() as db:

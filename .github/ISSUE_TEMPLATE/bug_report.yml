@@ -1,0 +1,47 @@
+name: Bug report
+description: Something does not work as documented
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. **Security problems: do not file them here.** Use "Report a vulnerability" under the Security tab.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Add a website ...
+        2. Start a crawl with ...
+        3. Open ...
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How do you run it?
+      options: [Docker Compose, Docker Compose with PostgreSQL, Manual install (SQLite), Manual install (PostgreSQL)]
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      placeholder: "0.1.0 or the commit id"
+  - type: input
+    id: os
+    attributes:
+      label: Operating system and browser
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      description: Server log lines around the problem. Remove anything private (URLs of internal sites, keys).
+      render: shell

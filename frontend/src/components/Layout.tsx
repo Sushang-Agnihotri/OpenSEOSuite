@@ -46,7 +46,7 @@ function Brand() {
     <Link to="/" className="flex items-center gap-2 px-1">
       <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-white"><Share2 className="h-4 w-4" /></span>
       <span className="leading-tight">
-        <span className="block text-sm font-semibold text-slate-900 dark:text-slate-50">SEO Toolkit</span>
+        <span className="block text-sm font-semibold text-slate-900 dark:text-slate-50">OpenSEOSuite</span>
         <span className="block text-[11px] text-slate-500 dark:text-slate-400">open source · self-hosted</span>
       </span>
     </Link>

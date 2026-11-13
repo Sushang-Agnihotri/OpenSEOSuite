@@ -109,7 +109,7 @@ async def suggest(seed: str, lang: str = "en", country: str = "us", sources: lis
     found: dict[str, set[str]] = defaultdict(set)
     errors: dict[str, str] = {}
     own = client is None
-    client = client or httpx.AsyncClient(timeout=10, headers={"User-Agent": "Mozilla/5.0 (compatible; UltimateSEOToolkit)"})
+    client = client or httpx.AsyncClient(timeout=10, headers={"User-Agent": "Mozilla/5.0 (compatible; OpenSEOSuite)"})
     sem = asyncio.Semaphore(4)
 
     async def one(source: str, q: str) -> None:

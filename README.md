@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/banner.svg" alt="Ultimate Open-Source SEO Toolkit: crawl, audit, research and monitor, self-hosted and free" width="100%">
+  <img src="docs/assets/banner.svg" alt="OpenSEOSuite: open-source SEO platform to crawl, audit, research and monitor, self-hosted and free" width="100%">
 </p>
 
 <p align="center">
@@ -14,6 +14,7 @@
 
 <p align="center">
   <a href="#quick-start">Quick start</a> ·
+  <a href="#see-it-in-action">Tour</a> ·
   <a href="#screenshots">Screenshots</a> ·
   <a href="#features">Features</a> ·
   <a href="#how-it-compares">How it compares</a> ·
@@ -21,21 +22,27 @@
   <a href="docs/ROADMAP.md">Roadmap</a>
 </p>
 
-# Ultimate Open-Source SEO Toolkit
+# OpenSEOSuite
 
-A self-hosted SEO platform you can run for free: site crawler, technical audit, internal-link analysis, keyword research, SERP and
-content analysis, Search Console reporting, page speed, monitoring and exportable reports — in one application, on your own machine.
+**A self-hosted, open-source SEO platform you can run for free**: site crawler, technical audit, internal-link analysis, keyword
+research, SERP and content analysis, Search Console reporting, page speed, monitoring and exportable reports — in one application, on
+your own machine, with your data staying with you.
 
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/site-audit-dark.png">
-    <img src="docs/screenshots/site-audit.png" alt="Site Audit screen: score, issue counts by severity and issues by category" width="92%">
-  </picture>
+  <img src="docs/assets/hero.png" alt="OpenSEOSuite dashboard and site audit screens" width="100%">
 </p>
 
 > **Status: 0.1.0 (first development release).** The crawler, audit engine, exports, monitoring and API are covered by automated tests
 > that run on Linux, Windows and macOS. Some integrations could not be verified against live third-party services yet.
 > `PROJECT_STATUS.md` lists precisely what is verified and `KNOWN_LIMITATIONS.md` what the tool cannot do.
+
+## See it in action
+
+<p align="center">
+  <img src="docs/assets/tour.gif" alt="Animated tour: dashboard, site audit, issue detail, internal linking, keyword research and monitoring" width="86%">
+</p>
+
+<p align="center"><sub>Real screens from a real crawl of the bundled test website (about 50 planted SEO problems) — nothing is mocked.</sub></p>
 
 ## At a glance
 
@@ -69,7 +76,21 @@ for a paid data API, while the genuinely free tools are single-purpose crawlers.
   totals are never guessed.
 - **Honest scope.** It does not contain Ahrefs' backlink index or Semrush's keyword database, and says so.
 
+<p align="center">
+  <img src="docs/assets/data-labels.svg" alt="Every number is labelled measured, imported, estimated or unavailable" width="86%">
+</p>
+
 ## Features
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/features-dark.svg">
+    <img src="docs/assets/features-light.svg" alt="The 15 modules: crawler, site audit, internal linking, keyword research, SERP analysis, content optimizer, competitors, backlinks, Search Console, page speed, schema markup, sitemaps, international SEO, local SEO and monitoring" width="100%">
+  </picture>
+</p>
+
+<details>
+<summary><b>Full feature list</b> (what each module does, in detail)</summary>
 
 | Module | What it does |
 |---|---|
@@ -89,6 +110,8 @@ for a paid data API, while the genuinely free tools are single-purpose crawlers.
 | **Monitoring** | Scheduled uptime checks, recurring audits, sitemap/metadata/competitor change detection, keyword position alerts, alert feed |
 | **Reports** | PDF audit report, PDF competitor report, Excel workbooks, CSV, JSON |
 | **AI (optional)** | Explain issues, prioritise fixes, titles/descriptions, briefs, action plans — through a local Ollama model or your own OpenAI-compatible API; always fed real data from your crawl |
+
+</details>
 
 ## Screenshots
 
@@ -311,7 +334,7 @@ Interactive OpenAPI docs are served at `/api/docs` (Swagger UI) and `/api/redoc`
 ## Testing
 
 ```bash
-cd backend && pip install -e ".[dev]" && pytest -q     # 220 tests: units, security, end-to-end crawl of a flawed test site
+cd backend && pip install -e ".[dev]" && pytest -q     # 221 tests: units, security, end-to-end crawl of a flawed test site
 cd frontend && npm test && npm run typecheck   # 18 tests
 ```
 

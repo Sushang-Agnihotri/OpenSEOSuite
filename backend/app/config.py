@@ -9,7 +9,7 @@ from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-APP_NAME = "Ultimate Open-Source SEO Toolkit"
+APP_NAME = "OpenSEOSuite"
 APP_VERSION = "0.1.0"
 
 

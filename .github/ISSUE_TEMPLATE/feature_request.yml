@@ -1,0 +1,30 @@
+name: Feature request
+description: Suggest an improvement or a new audit rule
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+      description: Describe the SEO task you are trying to do, not just the feature.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like to see?
+    validations:
+      required: true
+  - type: textarea
+    id: data
+    attributes:
+      label: Where would the data come from?
+      description: >
+        This project never invents numbers. If the idea needs search volumes, backlink data or similar, which free and
+        legitimate source could provide it?
+  - type: checkboxes
+    id: help
+    attributes:
+      label: Contribution
+      options:
+        - label: I would be willing to work on this (adding an audit rule is one catalogue entry, one check and one test)

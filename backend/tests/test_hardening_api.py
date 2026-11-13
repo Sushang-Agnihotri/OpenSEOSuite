@@ -301,3 +301,28 @@ def test_link_extraction_is_capped():
     anchors = "".join(f'<a href="/p{i}">l{i}</a>' for i in range(MAX_LINKS_PER_PAGE + 1500))
     page = parse_html(f"<html><head><title>t</title></head><body>{anchors}</body></html>".encode(), "https://example.com/", "text/html")
     assert len(page.links) == MAX_LINKS_PER_PAGE
+
+
+# ------------------------------------------------------------------------------------ crawl persistence
+def test_crawl_totals_include_a_slow_final_batch(client, auth, fixture_site, monkeypatch):
+    """Pages are written in batches of 40. A batch still being written when the crawl ends used to be missing from the
+    totals (a flaky 460-of-500 on slow CI disks); the final flush must wait for it."""
+    from app.crawler import engine
+    from tests.conftest import wait_for_job
+
+    original = engine.Crawler._flush_sync
+
+    def slow(self, batch):
+        time.sleep(0.03 * len(batch))  # a full batch of 40 takes longer than the small final one, so it finishes last
+        return original(self, batch)
+
+    monkeypatch.setattr(engine.Crawler, "_flush_sync", slow)
+    site = client.post("/api/sites", headers=auth, json={"name": "Slow flush", "url": fixture_site.url + "/big/0"}).json()
+    try:
+        r = client.post(f"/api/sites/{site['id']}/crawls", headers=auth,
+                        json={"max_urls": 100, "delay_ms": 0, "concurrency": 16, "use_sitemaps": False, "check_external_links": False}).json()
+        assert wait_for_job(client, auth, r["job_id"], timeout=120)["status"] == "completed"
+        stats = client.get(f"/api/crawls/{r['id']}", headers=auth).json()["stats"]
+        assert stats["total_urls"] == 100 and stats["html_pages"] == 100
+    finally:
+        client.delete(f"/api/sites/{site['id']}", headers=auth)

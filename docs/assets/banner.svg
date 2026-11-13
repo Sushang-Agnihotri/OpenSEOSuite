@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 320" width="1280" height="320" role="img" aria-label="Ultimate Open-Source SEO Toolkit: crawl, audit, research and monitor, self-hosted and free">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 320" width="1280" height="320" role="img" aria-label="OpenSEOSuite: open-source SEO platform to crawl, audit, research and monitor, self-hosted and free">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#0b1020"/>
@@ -28,9 +28,9 @@
   </g>
 
   <g font-family="Segoe UI, Helvetica, Arial, sans-serif" fill="#ffffff">
-    <text x="64" y="118" font-size="50" font-weight="700">Ultimate Open-Source SEO Toolkit</text>
+    <text x="64" y="118" font-size="50" font-weight="700">OpenSEOSuite</text>
     <rect x="64" y="140" width="200" height="6" rx="3" fill="url(#accent)"/>
-    <text x="64" y="194" font-size="25" fill="#c7d2fe">Crawl · Audit · Research · Monitor — on your own machine</text>
+    <text x="64" y="194" font-size="25" fill="#c7d2fe">Open-source SEO platform · crawl, audit, research, monitor</text>
     <text x="64" y="244" font-size="20" fill="#93a3c9">95 audit rules · no paid APIs · no invented numbers · MIT licensed</text>
   </g>
 </svg>

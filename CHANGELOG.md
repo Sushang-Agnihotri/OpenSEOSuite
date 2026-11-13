@@ -25,7 +25,14 @@ Result of the pre-release security review (details: `docs/SECURITY_REVIEW.md`).
 - Dependencies: Vite 6, Vitest 4, React Router 7 (8 npm advisories, 2 critical, resolved); GitHub Actions pinned by SHA; Dependabot and a
   scheduled security workflow added; Docker Compose binds to `127.0.0.1`, drops capabilities and sets `no-new-privileges`.
 
+### Fixed
+- Crawls could lose up to 40 pages from their totals when the last database batch was still being written as the crawl finished
+  (found by CI as an occasional 460-of-500 failure on slower disks).
+- `docker compose up -d` failed on a fresh checkout because the optional PostgreSQL service required a password even when it was not
+  started. PostgreSQL is now an optional override file, `docker-compose.postgres.yml`, and CI smoke-tests both variants.
+
 ### Changed
+- The product is named **OpenSEOSuite** (README, UI, licence holder, API title).
 - **Crawl include/exclude patterns are no longer regular expressions.** They are plain text with `*` wildcards and optional `^` / `$`
   anchors (for example `/blog/*`, `?sort=`, `.pdf$`).
 - `SEO_ALLOW_REGISTRATION` now defaults to `false` (the first account can always be created).
@@ -54,5 +61,5 @@ Result of the pre-release security review (details: `docs/SECURITY_REVIEW.md`).
   scheduler, React/TypeScript dashboard with light and dark themes.
 - **Security**: connection-level SSRF guard, Argon2id passwords, JWT auth, per-user data isolation, rate limiting, security headers,
   upload restrictions, formula-injection-safe exports.
-- **Tooling**: 220 backend tests including an end-to-end audit of a deliberately flawed test website, frontend tests, CI workflow,
+- **Tooling**: 221 backend tests including an end-to-end audit of a deliberately flawed test website, frontend tests, CI workflow,
   Dockerfile and Compose file.

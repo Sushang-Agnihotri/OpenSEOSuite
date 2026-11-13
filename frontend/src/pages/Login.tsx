@@ -36,7 +36,7 @@ export default function Login() {
       <div className="w-full max-w-sm">
         <div className="mb-6 flex flex-col items-center text-center">
           <span className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-brand-600 text-white"><Share2 className="h-5 w-5" /></span>
-          <h1 className="text-lg font-semibold text-slate-900 dark:text-slate-50">Ultimate Open-Source SEO Toolkit</h1>
+          <h1 className="text-lg font-semibold text-slate-900 dark:text-slate-50">OpenSEOSuite</h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             {firstRun ? "Welcome. Create the administrator account for this installation." : active === "register" ? "Create an account" : "Sign in to your workspace"}
           </p>
