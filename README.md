@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Sushang-Agnihotri/ultimate-open-source-seo-toolkit/actions/workflows/ci.yml"><img src="https://github.com/Sushang-Agnihotri/ultimate-open-source-seo-toolkit/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
+  <a href="https://github.com/Sushang-Agnihotri/OpenSEOSuite/actions/workflows/ci.yml"><img src="https://github.com/Sushang-Agnihotri/OpenSEOSuite/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
   <img src="https://img.shields.io/badge/license-MIT-green" alt="MIT licence">
   <img src="https://img.shields.io/badge/python-3.11%2B-blue" alt="Python 3.11+">
   <img src="https://img.shields.io/badge/node-20%2B-339933" alt="Node 20+">
@@ -51,8 +51,8 @@ content analysis, Search Console reporting, page speed, monitoring and exportabl
 ## Quick start
 
 ```bash
-git clone https://github.com/Sushang-Agnihotri/ultimate-open-source-seo-toolkit.git
-cd ultimate-open-source-seo-toolkit
+git clone https://github.com/Sushang-Agnihotri/OpenSEOSuite.git
+cd OpenSEOSuite
 docker compose up -d
 ```
 
@@ -185,8 +185,8 @@ More detail: `docs/ARCHITECTURE.md` and `ARCHITECTURE_DECISIONS.md`.
 ### Option A: Docker
 
 ```bash
-git clone <your fork or this repository> ultimate-open-source-seo-toolkit
-cd ultimate-open-source-seo-toolkit
+git clone <your fork or this repository> OpenSEOSuite
+cd OpenSEOSuite
 docker compose up -d
 ```
 

@@ -34,7 +34,7 @@ class Settings(BaseSettings):
 
     # Crawler safety
     allow_private_networks: bool = False  # set true only to audit sites on localhost / LAN
-    user_agent: str = "UltimateSEOToolkit/0.1 (+https://github.com/ultimate-open-source-seo-toolkit)"
+    user_agent: str = "OpenSEOSuite/0.1 (+https://github.com/Sushang-Agnihotri/OpenSEOSuite)"
     crawl_max_urls_hard_limit: int = 200_000
     crawl_max_body_mb: int = 8
     max_concurrent_jobs: int = 3

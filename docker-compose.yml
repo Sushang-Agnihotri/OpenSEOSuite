@@ -7,7 +7,7 @@
 services:
   app:
     build: .
-    image: ultimate-open-source-seo-toolkit:latest
+    image: openseosuite:latest
     restart: unless-stopped
     ports:
       - "${SEO_BIND:-127.0.0.1}:${SEO_PORT:-8000}:8000"

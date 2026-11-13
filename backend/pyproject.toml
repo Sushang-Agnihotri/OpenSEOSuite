@@ -1,5 +1,5 @@
 [project]
-name = "ultimate-open-source-seo-toolkit"
+name = "openseosuite"
 version = "0.1.0"
 description = "Self-hosted, open-source SEO platform: crawler, technical audit, keyword research, SERP and content analysis, monitoring and reporting."
 license = { text = "MIT" }
