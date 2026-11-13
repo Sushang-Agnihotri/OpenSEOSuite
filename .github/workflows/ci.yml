@@ -68,8 +68,7 @@ jobs:
         shell: bash
         run: |
           # Failures are also written as annotations so they are readable without signing in to GitHub.
-          note() { echo "::error title=$1::$(tr '
-' ' ' < "$2" | cut -c1-1800)"; }
+          note() { echo "::error title=$1::$(paste -sd' ' "$2" | cut -c1-1800)"; }
           docker rm -f seo
           if ! docker compose up -d --build > /tmp/compose-up.log 2>&1; then
             note "docker compose up failed" /tmp/compose-up.log
