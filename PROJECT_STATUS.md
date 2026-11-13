@@ -19,7 +19,7 @@ This file separates what has been **verified** from what is **implemented but un
 | I | Content optimisation and AI | Done; AI providers unverified against a live model |
 | J | Search Console and PageSpeed integrations | Implemented; live calls unverified (see below) |
 | K | Monitoring and reporting | Done, tested |
-| L | Security, testing, optimisation, release | Security review done and findings fixed (`docs/SECURITY_REVIEW.md`); Docker image builds and starts in CI; pushed to a private GitHub repository; public release pending |
+| L | Security, testing, optimisation, release | Security review done and findings fixed (`docs/SECURITY_REVIEW.md`); Docker image and both Compose variants verified in CI; public on GitHub |
 
 ## Verification record
 
@@ -49,6 +49,7 @@ This file separates what has been **verified** from what is **implemented but un
   skipped there because Chromium is not installed in CI.
 - Frontend type-check, tests and production build on Ubuntu.
 - `docker build` of the image, then a container started from it answers `/api/health`.
+- `docker compose up -d` from a fresh checkout with no `.env` file (the README quick start), and the PostgreSQL variant (`docker-compose.postgres.yml`) including a registration written through the API into PostgreSQL 16 — this is the only PostgreSQL verification so far.
 
 ### Verified manually
 
@@ -65,10 +66,10 @@ This file separates what has been **verified** from what is **implemented but un
 | Search Console OAuth, property list, API sync | No Google Cloud OAuth client available | Token exchange / API response handling untested |
 | SERP providers (SearXNG, Google Programmable Search, Brave) | No instance or API keys available | Response mapping untested; manual-URL mode is tested |
 | AI providers (Ollama, OpenAI-compatible) | No model server available | Prompt construction is tested; HTTP calls are not |
-| PostgreSQL | Only SQLite was run | Possible dialect differences |
-| Docker Compose / container in real use | CI builds the image and checks `/api/health` only. `docker compose up`, the data volume, and using the UI or running a crawl inside the container have not been tried (Docker cannot start on the development machine: WSL service disabled). | Volume permissions or crawl behaviour inside the container could still surprise |
+| PostgreSQL beyond a smoke test | CI proves the migrations apply and a user can be written through the API on PostgreSQL 16 in a container. The full test suite and crawls were only run on SQLite | Dialect differences in less common queries |
+| Docker on Windows/macOS and long-running use | CI runs on Linux only. A crawl, the data volume across restarts and the UI inside the container were not exercised | Volume permissions or crawl behaviour inside the container could still surprise |
 | Frontend interactions | Screens were loaded and checked for errors; forms/buttons on most screens were not clicked through one by one. The Search Console return flow was checked in the browser only with an invalid state | UI bugs in less common flows are likely |
-| New hardening settings in Docker | `docker-compose.yml` now drops capabilities, sets `no-new-privileges` and binds `127.0.0.1`; CI runs `docker compose up` for the first time on the next push, nothing has been run locally | A Compose option could break startup on some engines |
+| Dropped capabilities and `no-new-privileges` | Applied in `docker-compose.yml` and covered by the Compose smoke test (the app starts and answers health and registration) | Anything that needs a capability at runtime would only show up in less common flows |
 | External penetration test | Not done; the review was code reading, scanners and regression tests | Unknown issues may remain |
 
 ### Not implemented
@@ -92,7 +93,7 @@ Google Trends, Google Business Profile, notifications by e-mail/webhook, URL Ins
 | 10 | Core modules have automated tests | **Verified** |
 | 11 | Security checks completed | **Verified** by review, scanners and tests (`docs/SECURITY_REVIEW.md`); no external penetration test |
 | 12 | Documentation complete | **Yes**: README with 23 real screenshots, security review, architecture, API and limitations documents |
-| 13 | Docker deployment works | **Partly verified**: image builds and serves the health endpoint in CI; `docker compose up` not run |
+| 13 | Docker deployment works | **Verified in CI (Linux)**: image build, `docker compose up` with SQLite and with PostgreSQL; not run on Docker Desktop |
 | 14 | No critical errors remain | None known; UI flows only partly exercised |
 | 15 | Works without paid API subscriptions | **Verified** |
 
@@ -101,8 +102,8 @@ exercised (or clearly marked experimental in the UI) first.
 
 ## Next steps
 
-1. Run `docker compose up` on a machine with a working Docker engine and do a crawl inside the container.
+1. Try the image on Docker Desktop (Windows/macOS) and run a crawl inside the container.
 2. Click through every form in the UI; add frontend tests for the main flows.
 3. Verify PageSpeed (with a free API key), Search Console OAuth, one SERP provider and Ollama.
 4. Crawl a few real public sites of different sizes; tune defaults.
-5. Confirm the new CI runs (security workflow, `docker compose` smoke test) are green, then make the GitHub repository public.
+5. Add repository topics, a description and the social preview image on GitHub, then announce it.

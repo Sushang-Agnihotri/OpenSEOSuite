@@ -214,6 +214,12 @@ docker compose up -d
 ```
 
 Open http://localhost:8000 and create the first account (it becomes the administrator). Data is kept in the `seo-data` volume.
+
+To use PostgreSQL instead of SQLite, layer the optional file and set two values in `.env` (see `.env.example`):
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.postgres.yml up -d
+```
 The port is published on this machine only; to reach it from elsewhere put an HTTPS reverse proxy in front (see [Security](#security)).
 
 ### Option B: Manual (Windows, macOS, Linux)
