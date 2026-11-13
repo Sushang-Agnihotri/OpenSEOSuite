@@ -14,7 +14,7 @@ from ..crawler.parser import parse_html
 from ..crawler.robots import RobotsRules
 from ..crawler.sitemaps import discover_sitemaps
 from ..db import session_scope
-from ..jobs import JobContext, jobs
+from ..jobs import JobContext, JobLimitError, jobs
 from ..models import Alert, Competitor, Crawl, GscRow, Keyword, Monitor, Page, Site, utcnow
 
 log = logging.getLogger("seo.monitor")
@@ -195,11 +195,22 @@ async def run_monitor(monitor_id: int, ctx: JobContext | None = None) -> dict:
     return {"monitor_id": monitor_id, "alerts": len(alerts), "status": status}
 
 
+_active_monitors: set[int] = set()
+
+
+class MonitorBusyError(RuntimeError):
+    """The monitor (or its site's crawl) is already running."""
+
+
 def start_monitor_job(monitor_id: int) -> int:
+    if monitor_id in _active_monitors:
+        raise MonitorBusyError("This monitor is already running")
     with session_scope() as db:
         mon = db.get(Monitor, monitor_id)
         site = db.get(Site, mon.site_id)
         owner_id, site_id, kind = site.owner_id, site.id, mon.kind
+        if kind == "audit" and db.scalar(select(Crawl.id).where(Crawl.site_id == site_id, Crawl.status.in_(("queued", "running"))).limit(1)):
+            raise MonitorBusyError("A crawl is already running for this site")
         mon.next_run = utcnow() + timedelta(hours=mon.interval_hours)  # avoid double scheduling while it runs
 
     async def _job(ctx: JobContext) -> dict:
@@ -211,8 +222,15 @@ def start_monitor_job(monitor_id: int) -> int:
                 if m:
                     m.last_run, m.last_status = utcnow(), "error"
             raise
+        finally:
+            _active_monitors.discard(monitor_id)
 
-    return jobs.start(f"monitor:{kind}", _job, owner_id=owner_id, site_id=site_id)
+    _active_monitors.add(monitor_id)
+    try:
+        return jobs.start(f"monitor:{kind}", _job, owner_id=owner_id, site_id=site_id)
+    except Exception:
+        _active_monitors.discard(monitor_id)
+        raise
 
 
 async def scheduler_loop(interval_s: float = 60.0) -> None:
@@ -223,7 +241,10 @@ async def scheduler_loop(interval_s: float = 60.0) -> None:
             with session_scope() as db:
                 due = list(db.scalars(select(Monitor.id).where(Monitor.enabled.is_(True), (Monitor.next_run.is_(None)) | (Monitor.next_run <= utcnow())).limit(20)))
             for mid in due:
-                start_monitor_job(mid)
+                try:
+                    start_monitor_job(mid)
+                except (MonitorBusyError, JobLimitError):
+                    continue  # still running, or its owner is at the job cap: try again next tick
         except Exception:  # noqa: BLE001 - the scheduler must survive transient database errors
             log.exception("scheduler tick failed")
         await asyncio.sleep(interval_s)

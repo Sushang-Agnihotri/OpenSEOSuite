@@ -44,6 +44,9 @@ class FetchResult:
         return self.content_type in ("text/html", "application/xhtml+xml")
 
 
+MIN_BYTES_PER_SECOND = 256 * 1024  # slower transfers are cut off by the overall deadline
+
+
 class HostThrottle:
     """Guarantees a minimum delay between request starts for the same host."""
 
@@ -79,6 +82,7 @@ class Fetcher:
     ) -> None:
         s = get_settings()
         self.allow_private = s.allow_private_networks if allow_private is None else allow_private
+        self.timeout_s = timeout_s
         self.retries = max(0, retries)
         self.max_body = max_body_bytes or s.crawl_max_body_mb * 1024 * 1024
         self.throttle = HostThrottle(delay_s)
@@ -86,6 +90,10 @@ class Fetcher:
             retries=0, limits=httpx.Limits(max_connections=concurrency * 2, max_keepalive_connections=concurrency)
         )
         # Route every outgoing connection through the vetted-address backend (see security/ssrf.py).
+        # This relies on a private httpcore attribute; fail loudly if a library update ever renames it,
+        # rather than assigning to a name nothing reads and silently losing the SSRF guard.
+        if not hasattr(transport._pool, "_network_backend"):  # noqa: SLF001
+            raise RuntimeError("httpcore no longer exposes _network_backend: the SSRF guard cannot be installed")
         transport._pool._network_backend = SafeNetworkBackend(self.allow_private)  # noqa: SLF001
         self.client = httpx.AsyncClient(
             transport=transport,
@@ -118,8 +126,11 @@ class Fetcher:
             return res
         await self.throttle.wait(urlsplit(url).hostname or "")
         started = time.monotonic()
+        # Overall deadline: the per-read timeout alone lets a server that drips one byte at a time hold a
+        # connection (and a job slot) for days. Allow a generous fixed budget plus a minimum transfer rate.
+        deadline = self.timeout_s * 3 + max_body / MIN_BYTES_PER_SECOND
         try:
-            async with self.client.stream(method, url) as resp:
+            async with asyncio.timeout(deadline), self.client.stream(method, url) as resp:
                 res.elapsed_ms = int((time.monotonic() - started) * 1000)  # time to first byte
                 res.status = resp.status_code
                 res.headers = {k.lower(): v for k, v in resp.headers.items()}
@@ -138,7 +149,7 @@ class Fetcher:
                     res.body = b"".join(chunks)
         except UnsafeURLError as exc:
             res.error = f"blocked: {exc}"
-        except httpx.TimeoutException:
+        except (httpx.TimeoutException, TimeoutError):
             res.error = "timeout"
         except httpx.TooManyRedirects:
             res.error = "too many redirects"

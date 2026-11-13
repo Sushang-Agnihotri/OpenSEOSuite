@@ -1,6 +1,7 @@
 """Keyword research, SERP analysis, content optimiser, schema tools and page speed."""
 from __future__ import annotations
 
+import asyncio
 import json
 from typing import Any, Literal
 
@@ -303,11 +304,12 @@ async def content_fetch(body: FetchIn, user: User = Depends(current_user)) -> di
         res = await fetcher.fetch_following(url, max_body=3_000_000)
     if res.status != 200 or not res.is_html:
         raise HTTPException(400, f"Could not load the page: {res.error or f'HTTP {res.status}'}")
-    p = parse_html(res.body, res.final_url or url, res.headers.get("content-type", ""))
+    p = await asyncio.to_thread(parse_html, res.body, res.final_url or url, res.headers.get("content-type", ""))
     md = "\n\n".join(f"{'#' * h['level']} {h['text']}" for h in p.headings[:3]) if not p.text else ""
     try:
         import trafilatura
-        md = trafilatura.extract(res.body.decode("utf-8", "replace"), output_format="markdown", include_links=True, include_images=True) or md
+        md = await asyncio.to_thread(
+            trafilatura.extract, res.body.decode("utf-8", "replace"), output_format="markdown", include_links=True, include_images=True) or md
     except Exception:  # noqa: BLE001 - fall back to plain text below
         pass
     return {"url": res.final_url or url, "title": p.title, "meta_description": p.meta_description, "content": md or p.text, "word_count": p.word_count}
@@ -335,7 +337,7 @@ async def schema_validate(body: SchemaValidateIn, user: User = Depends(current_u
     if body.jsonld:
         raw = body.jsonld.strip()
         if raw.lower().startswith("<script"):
-            page = parse_html(f"<html><head>{raw}</head><body></body></html>".encode(), "https://input.invalid/")
+            page = await asyncio.to_thread(parse_html, f"<html><head>{raw}</head><body></body></html>".encode(), "https://input.invalid/")
             items, parse_errors = page.jsonld, page.jsonld_errors
         else:
             try:
@@ -349,7 +351,7 @@ async def schema_validate(body: SchemaValidateIn, user: User = Depends(current_u
             res = await fetcher.fetch_following(url, max_body=3_000_000)
         if res.status != 200 or not res.is_html:
             raise HTTPException(400, f"Could not load the page: {res.error or f'HTTP {res.status}'}")
-        page = parse_html(res.body, res.final_url or url, res.headers.get("content-type", ""))
+        page = await asyncio.to_thread(parse_html, res.body, res.final_url or url, res.headers.get("content-type", ""))
         items, parse_errors, microdata = page.jsonld, page.jsonld_errors, page.microdata_types
     else:
         raise HTTPException(422, "Provide a URL or JSON-LD markup")
@@ -390,9 +392,13 @@ async def pagespeed_run(body: SpeedIn, user: User = Depends(current_user), db: S
     site_id = get_site_for(db, user, body.site_id).id if body.site_id else None
     try:
         if body.source == "local":
+            if not user.is_admin:  # starts a full Chrome on the server
+                raise HTTPException(403, "Local Lighthouse runs are limited to administrators")
             data = await psi.run_local_lighthouse(url, body.strategy)
         else:
             data = await psi.run_psi(url, body.strategy, get_setting(db, "pagespeed").get("api_key", ""))
+    except HTTPException:
+        raise
     except Exception as exc:  # noqa: BLE001 - surfaced to the user as a failed run
         raise HTTPException(502, str(exc)) from exc
     row = PageSpeedResult(site_id=site_id, owner_id=user.id, url=url, strategy=body.strategy, source=data["source"], data=data)

@@ -413,9 +413,37 @@ function Insights({ site }: { site: Site }) {
   );
 }
 
+type OAuthState = { kind: "working" | "ok" | "error"; message?: string } | null;
+
+/** Google sends the browser back with a one-time code in the URL fragment. It is exchanged here, with the
+ *  signed-in user's token, so a consent link started by someone else cannot attach its Google account to you. */
+function useOAuthReturn(onDone: () => void): OAuthState {
+  const [state, setState] = useState<OAuthState>(null);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    const code = params.get("gsc_code");
+    const oauthState = params.get("gsc_state");
+    const err = params.get("gsc_error");
+    if (!code && !oauthState && !err) return;
+    window.history.replaceState(null, "", window.location.pathname); // keep the code out of the address bar and history
+    if (err) { setState({ kind: "error", message: "The Google connection was cancelled." }); return; }
+    if (!code || !oauthState) return;
+    setState({ kind: "working" });
+    api.post("/gsc/exchange", { code, state: oauthState })
+      .then(() => { setState({ kind: "ok" }); onDone(); })
+      .catch((e) => setState({ kind: "error", message: e instanceof ApiError ? e.message : "Could not complete the Google connection." }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return state;
+}
+
 export default function SearchConsole() {
   const { site } = useSite();
   const qc = useQueryClient();
+  const oauth = useOAuthReturn(() => {
+    void qc.invalidateQueries({ queryKey: ["gsc-status"] });
+    void qc.invalidateQueries({ queryKey: ["gsc-properties"] });
+  });
   if (!site) return <NeedsCrawl hasSite={false} />;
   const onData = () => {
     void qc.invalidateQueries({ queryKey: ["gsc", site.id] });
@@ -426,6 +454,9 @@ export default function SearchConsole() {
       <PageHeader title="Search Console"
         description="Clicks, impressions, CTR and position as measured by Google for your site, plus insights derived from them. Connect the API or import CSV exports." />
       <div className="space-y-4">
+        {oauth?.kind === "working" && <Notice>Finishing the Google connection…</Notice>}
+        {oauth?.kind === "ok" && <Notice tone="success">Search Console connected.</Notice>}
+        {oauth?.kind === "error" && <ErrorBox error={oauth.message ?? "The Google connection failed."} />}
         <div className="grid gap-4 xl:grid-cols-2">
           <ConnectionPanel key={`c-${site.id}`} site={site} onData={onData} />
           <ImportPanel key={`i-${site.id}`} site={site} onData={onData} />

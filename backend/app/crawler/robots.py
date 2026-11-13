@@ -1,24 +1,17 @@
 """robots.txt parsing and matching following RFC 9309 (wildcards, ``$`` anchors, longest match wins)."""
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass, field
 from urllib.parse import urlsplit
+
+from .globmatch import MAX_PATTERN_LENGTH, robots_match
 
 
 @dataclass
 class _Group:
     agents: list[str] = field(default_factory=list)
-    rules: list[tuple[bool, str, re.Pattern]] = field(default_factory=list)  # (allow, pattern, regex)
+    rules: list[tuple[bool, str]] = field(default_factory=list)  # (allow, pattern)
     crawl_delay: float | None = None
-
-
-def _compile(pattern: str) -> re.Pattern:
-    anchored = pattern.endswith("$")
-    if anchored:
-        pattern = pattern[:-1]
-    regex = "".join(".*" if ch == "*" else re.escape(ch) for ch in pattern)
-    return re.compile(regex + ("$" if anchored else ""))
 
 
 class RobotsRules:
@@ -61,11 +54,13 @@ class RobotsRules:
                 if group is None:
                     self.errors.append(f"Line {n}: rule appears before any User-agent line")
                     continue
-                if value:
+                if value and len(value) > MAX_PATTERN_LENGTH:
+                    self.errors.append(f"Line {n}: rule longer than {MAX_PATTERN_LENGTH} characters ignored")
+                elif value:
                     if not value.startswith(("/", "*")):
                         self.errors.append(f"Line {n}: path '{value}' should start with '/'")
                         value = "/" + value
-                    group.rules.append((key == "allow", value, _compile(value)))
+                    group.rules.append((key == "allow", value))
             elif key == "crawl-delay":
                 try:
                     if group:
@@ -100,8 +95,8 @@ class RobotsRules:
             return True
         verdict, length = True, -1
         for g in self._group_for(user_agent):
-            for allow, pattern, regex in g.rules:
-                if regex.match(path):
+            for allow, pattern in g.rules:
+                if robots_match(pattern, path):
                     plen = len(pattern)
                     if plen > length or (plen == length and allow):
                         verdict, length = allow, plen

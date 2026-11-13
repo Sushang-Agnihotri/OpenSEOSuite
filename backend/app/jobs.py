@@ -19,6 +19,10 @@ from .models import Job, utcnow
 log = logging.getLogger("seo.jobs")
 
 
+class JobLimitError(RuntimeError):
+    """The account already has the maximum number of queued or running background jobs."""
+
+
 class JobContext:
     def __init__(self, job_id: int) -> None:
         self.job_id = job_id
@@ -45,6 +49,7 @@ JobFunc = Callable[[JobContext], Awaitable[dict | None]]
 class JobManager:
     def __init__(self) -> None:
         self._tasks: dict[int, asyncio.Task] = {}
+        self._owners: dict[int, int | None] = {}
         self._sem: asyncio.Semaphore | None = None
 
     def _semaphore(self) -> asyncio.Semaphore:
@@ -54,6 +59,12 @@ class JobManager:
 
     def start(self, kind: str, func: JobFunc, owner_id: int | None = None, site_id: int | None = None) -> int:
         """Create a job row and schedule ``func``. Must be called from the event loop thread."""
+        if owner_id is not None:
+            limit = get_settings().max_jobs_per_user
+            active = sum(1 for jid, owner in self._owners.items() if owner == owner_id and jid in self._tasks)
+            if active >= limit:
+                raise JobLimitError(f"You already have {active} background jobs queued or running (limit {limit}). "
+                                    "Wait for some to finish or cancel them first.")
         with session_scope() as db:
             job = Job(kind=kind, owner_id=owner_id, site_id=site_id, status="queued", message="Waiting for a free worker")
             db.add(job)
@@ -61,7 +72,8 @@ class JobManager:
             job_id = job.id
         task = asyncio.get_running_loop().create_task(self._run(job_id, func), name=f"job-{job_id}")
         self._tasks[job_id] = task
-        task.add_done_callback(lambda _t, j=job_id: self._tasks.pop(j, None))
+        self._owners[job_id] = owner_id
+        task.add_done_callback(lambda _t, j=job_id: (self._tasks.pop(j, None), self._owners.pop(j, None)))
         return job_id
 
     async def _run(self, job_id: int, func: JobFunc) -> None:

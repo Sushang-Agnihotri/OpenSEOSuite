@@ -7,6 +7,35 @@ uses [Semantic Versioning](https://semver.org/).
 
 First development release.
 
+### Security
+Result of the pre-release security review (details: `docs/SECURITY_REVIEW.md`).
+- JavaScript rendering: every browser request is vetted and performed with redirects disabled; WebSockets blocked; frame URLs re-checked;
+  Chromium sandbox on by default (`SEO_RENDER_SANDBOX`).
+- Local Lighthouse: administrator-only, one run at a time, final URL re-checked, errors no longer echoed.
+- `robots.txt` rules and crawl filters use a linear-time matcher instead of regular expressions (a hostile `robots.txt` or pattern could
+  freeze the server).
+- Request-body size limit enforced before bodies are read; overall deadline and minimum transfer rate per fetch; per-account job cap;
+  links-per-page cap; hostile HTML parsed off the event loop.
+- Search Console OAuth: `state` is single-use and bound to the signed-in account; the code is exchanged by the app with the user's token.
+- Accounts: registration closed after the first account by default; atomic first-admin creation; per-account login lockout; password
+  change invalidates older sessions; trusted-proxy aware rate limiting (`SEO_TRUSTED_PROXIES`); secret key file created owner-only.
+- Web: Permissions-Policy, COOP/CORP, HSTS over HTTPS, `Cache-Control: no-store` on the API, narrow CSP for the API docs, only `http(s)`
+  links are clickable; static-file requests are vetted before touching the filesystem (UNC path leak on Windows).
+- SSRF guard: deprecated IPv6 ranges refused; startup failure instead of a silently inactive guard.
+- Dependencies: Vite 6, Vitest 4, React Router 7 (8 npm advisories, 2 critical, resolved); GitHub Actions pinned by SHA; Dependabot and a
+  scheduled security workflow added; Docker Compose binds to `127.0.0.1`, drops capabilities and sets `no-new-privileges`.
+
+### Changed
+- **Crawl include/exclude patterns are no longer regular expressions.** They are plain text with `*` wildcards and optional `^` / `$`
+  anchors (for example `/blog/*`, `?sort=`, `.pdf$`).
+- `SEO_ALLOW_REGISTRATION` now defaults to `false` (the first account can always be created).
+- Docker Compose publishes the port on `127.0.0.1` by default (`SEO_BIND=0.0.0.0` to expose it).
+- `/api/auth/password` returns a fresh token; older tokens stop working.
+- `/api/gsc/callback` now redirects into the app; the exchange happens at `POST /api/gsc/exchange`.
+
+### Added (documentation)
+- README banner, badges, 23 screenshots from a real instance (`scripts/capture_screenshots.py`), comparison table and security section.
+
 ### Added
 - **Crawler**: asyncio crawler with RFC 9309 robots.txt handling, sitemap discovery (index, gzip, text), depth/URL limits, per-host
   throttling with crawl-delay, retries honouring Retry-After, include/exclude patterns, optional subdomains, external-link and image
@@ -25,5 +54,5 @@ First development release.
   scheduler, React/TypeScript dashboard with light and dark themes.
 - **Security**: connection-level SSRF guard, Argon2id passwords, JWT auth, per-user data isolation, rate limiting, security headers,
   upload restrictions, formula-injection-safe exports.
-- **Tooling**: 167 backend tests including an end-to-end audit of a deliberately flawed test website, frontend tests, CI workflow,
+- **Tooling**: 220 backend tests including an end-to-end audit of a deliberately flawed test website, frontend tests, CI workflow,
   Dockerfile and Compose file.

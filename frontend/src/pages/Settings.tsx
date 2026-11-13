@@ -3,7 +3,7 @@ import { CheckCircle2, PlugZap, XCircle } from "lucide-react";
 import { type FormEvent, type ReactNode, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Badge, Button, Card, ErrorBox, Field, Input, KeyValue, Notice, PageHeader, Select, Spinner } from "../components/ui";
-import { api } from "../lib/api";
+import { api, tokenStore } from "../lib/api";
 import { useAuth } from "../lib/context";
 
 const MASK = "********";
@@ -69,7 +69,10 @@ function Account() {
   const [mismatch, setMismatch] = useState(false);
   const change = useMutation({
     mutationFn: () => api.post("/auth/password", { current_password: current, new_password: next }),
-    onSuccess: () => { setCurrent(""); setNext(""); setConfirm(""); },
+    onSuccess: (r: { access_token?: string }) => {
+      if (r?.access_token) tokenStore.set(r.access_token); // tokens issued before the change no longer work
+      setCurrent(""); setNext(""); setConfirm("");
+    },
   });
   const submit = (e: FormEvent) => {
     e.preventDefault();

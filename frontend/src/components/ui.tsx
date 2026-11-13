@@ -353,7 +353,13 @@ export function Pagination({ page, perPage, total, onPage }: { page: number; per
 }
 
 /* ------------------------------------------------------------------ misc */
+/** Crawled pages control these strings: only http(s) URLs may become links ("javascript:" and "data:" must not). */
+export const isHttpUrl = (s: string) => /^https?:\/\//i.test(s.trim());
+
 export function Url({ href, label, className }: { href: string; label?: string; className?: string }) {
+  if (!isHttpUrl(href)) {
+    return <span title={href} className={clsx("break-all text-slate-700 dark:text-slate-300", className)}>{label ?? href}</span>;
+  }
   return (
     <a href={href} target="_blank" rel="noopener noreferrer nofollow" onClick={(e) => e.stopPropagation()} title={href}
       className={clsx("break-all text-brand-700 hover:underline dark:text-brand-300", className)}>{label ?? href}</a>

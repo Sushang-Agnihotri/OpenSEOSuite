@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { DataBadge, DataTable, Modal, Pagination, SeverityBadge, StatusCode, Tabs, type Column } from "../components/ui";
+import { DataBadge, DataTable, isHttpUrl, Modal, Pagination, SeverityBadge, StatusCode, Tabs, Url, type Column } from "../components/ui";
 import { api, ApiError, tokenStore } from "../lib/api";
 import { fmtBytes, fmtMs, fmtPct, scoreColor, shortUrl } from "../lib/format";
 
@@ -117,4 +117,20 @@ describe("api client", () => {
     await api.get("/crawls/1/pages", { q: "", status: "4xx", page: 2, kind: undefined });
     expect(spy.mock.calls[0][0]).toBe("/api/crawls/1/pages?status=4xx&page=2");
   });
+});
+
+describe("Url", () => {
+  it("links http(s) addresses and opens them safely", () => {
+    render(<Url href="https://example.com/page" />);
+    const a = screen.getByRole("link");
+    expect(a).toHaveAttribute("href", "https://example.com/page");
+    expect(a).toHaveAttribute("rel", expect.stringContaining("noopener"));
+  });
+
+  it.each(["javascript:alert(1)", "  JaVaScRiPt:alert(1)", "data:text/html,<script>1</script>", "vbscript:x", "//evil.example/x", ""])(
+    "never renders %j as a link", (href) => {
+      render(<Url href={href} label="shown" />);
+      expect(screen.queryByRole("link")).toBeNull();
+      expect(isHttpUrl(href)).toBe(false);
+    });
 });

@@ -27,9 +27,15 @@ the current implementation.
 
 ## Crawler
 
-- **JavaScript rendering** requires installing Playwright and Chromium separately (about 150 MB). It is covered by one automated test
-  (skipped when Chromium is absent) and is much slower than plain fetching. In rendered mode the browser resolves DNS itself after our
-  address check, so rebinding protection is weaker than for plain HTTP fetching.
+- **JavaScript rendering** requires installing Playwright and Chromium separately (about 150 MB). It is covered by three automated tests
+  (skipped when Chromium is absent) and is much slower than plain fetching. Each browser request is vetted and redirects are refused
+  (a rendered page that redirects is not rendered), but DNS is resolved again by the browser stack after our address check, so
+  rebinding protection is weaker than for plain HTTP fetching. If the Chromium sandbox cannot start (some containers), set
+  `SEO_RENDER_SANDBOX=false`, accepting the added risk.
+- **Include/exclude patterns** are plain text with `*`, `^` and `$` (not regular expressions): regular expressions from untrusted input
+  can freeze a single-process server.
+- **Local Lighthouse** (optional) is administrator-only and runs one audit at a time. Chrome follows redirects itself, so a run can
+  *request* an internal address even though the result is then discarded.
 - One crawl runs in one process. Around 50 pages/second was measured against a local test site; real sites are bounded by politeness
   delays. Crawls of hundreds of thousands of URLs are possible in principle but untested; memory grows with the link graph.
 - Jobs are in-process: a server restart aborts running crawls (they are marked failed and can be restarted).

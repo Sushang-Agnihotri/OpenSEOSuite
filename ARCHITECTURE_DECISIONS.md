@@ -86,3 +86,17 @@ file is documented in SECURITY.md. Encryption with a master key is on the roadma
 ## ADR-015: MIT licence
 **Decision.** MIT. All code is original; dependencies are MIT/BSD/Apache-2.0/ISC. GPL/AGPL projects were studied for ideas only, and
 SearXNG (AGPL) is only ever contacted over HTTP as a separate service.
+
+## ADR-016: Hardening decisions from the pre-release security review
+**Decisions.**
+1. *No regular expressions built from untrusted input.* `robots.txt` rules and crawl include/exclude filters use a linear-time wildcard
+   matcher (`crawler/globmatch.py`). Python's `re` cannot be interrupted, and one pathological pattern would freeze the single process.
+2. *The browser renderer never follows redirects.* Chromium follows them without consulting request interception, so each request is
+   fetched through Playwright with redirects disabled and a redirecting page is simply not rendered.
+3. *OAuth is completed by the app, not the callback.* The Google redirect carries no credentials, so `/api/gsc/callback` only forwards
+   `code` and `state` in the URL fragment; the SPA posts them with the user's bearer token and the server accepts a single-use `state`
+   that belongs to that account.
+4. *Sessions end when the password changes without server-side session state.* Tokens carry a fingerprint of the password hash.
+5. *Secure defaults over convenience.* Registration is closed after the first account; Compose publishes on `127.0.0.1`.
+**Trade-offs.** Users lose regular expressions in crawl filters; teams must opt in to self-service sign-up; there is still no
+per-session revocation. See `docs/SECURITY_REVIEW.md`.

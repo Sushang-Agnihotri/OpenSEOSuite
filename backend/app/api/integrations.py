@@ -5,9 +5,10 @@ import csv
 import io
 from datetime import date, timedelta
 from typing import Any, Literal
+from urllib.parse import urlencode, urlsplit
 
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile
-from fastapi.responses import HTMLResponse
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import delete, func, or_, select
 from sqlalchemy.orm import Session
@@ -18,7 +19,7 @@ from ..integrations import ai, gsc
 from ..jobs import jobs
 from ..models import Alert, Backlink, Citation, Crawl, GscRow, Issue, Link, Monitor, Page, Site, User, utcnow
 from ..reports.exports import to_csv, to_xlsx
-from ..security.auth import admin_user, create_access_token, current_user, decode_token, get_site_for
+from ..security.auth import admin_user, current_user, get_site_for
 from ..services import backlinks as bl
 from ..services import competitors as comp_service
 from ..services import monitoring
@@ -39,26 +40,41 @@ def gsc_status(user: User = Depends(current_user), db: Session = Depends(get_db)
 @router.get("/gsc/auth-url")
 def gsc_auth_url(user: User = Depends(current_user), db: Session = Depends(get_db)) -> dict:
     try:
-        return {"url": gsc.auth_url(db, create_access_token(user.id, purpose="gsc_oauth", minutes=15))}
+        return {"url": gsc.auth_url(db, gsc.issue_state(user.id))}
     except gsc.GscError as exc:
         raise HTTPException(400, str(exc)) from exc
 
 
-@router.get("/gsc/callback", response_class=HTMLResponse, include_in_schema=False)
-async def gsc_callback(code: str | None = None, state: str | None = None, error: str | None = None, db: Session = Depends(get_db)):
-    """OAuth redirect target. The signed ``state`` identifies the user and protects against CSRF."""
-    def page(msg: str) -> HTMLResponse:
-        return HTMLResponse(f"<!doctype html><meta charset='utf-8'><title>Search Console</title><body style='font-family:system-ui;padding:3rem'>"
-                            f"<h2>{msg}</h2><p><a href='/settings'>Return to the app</a></p></body>")
-    if error or not code or not state:
-        return page("Search Console connection was cancelled.")
-    user_id = decode_token(state, purpose="gsc_oauth")
+@router.get("/gsc/callback", include_in_schema=False)
+def gsc_callback(code: str | None = None, state: str | None = None, error: str | None = None) -> RedirectResponse:
+    """OAuth redirect target. It is reached by a plain browser navigation without credentials, so it does not
+    exchange anything: it forwards ``code`` and ``state`` in the URL *fragment* (never sent to a server, kept out of
+    logs and Referer headers) to the app, which completes the exchange with the signed-in user's bearer token."""
+    if error or not code or not state or len(code) > 2048 or len(state) > 2048:
+        target = "/search-console#gsc_error=cancelled"
+    else:
+        target = "/search-console#" + urlencode({"gsc_code": code, "gsc_state": state})
+    return RedirectResponse(target, status_code=303, headers={"Referrer-Policy": "no-referrer", "Cache-Control": "no-store"})
+
+
+class GscExchangeIn(BaseModel):
+    code: str = Field(min_length=1, max_length=2048)
+    state: str = Field(min_length=1, max_length=2048)
+
+
+@router.post("/gsc/exchange")
+async def gsc_exchange(body: GscExchangeIn, user: User = Depends(current_user), db: Session = Depends(get_db)) -> dict:
+    """Finish the OAuth flow. ``state`` must have been issued to the calling account."""
     try:
-        await gsc.exchange_code(db, user_id, code)
+        gsc.consume_state(body.state, user.id)
+    except gsc.GscForbidden as exc:
+        raise HTTPException(403, str(exc)) from exc
+    try:
+        await gsc.exchange_code(db, user.id, body.code)
         db.commit()
-    except gsc.GscError:
-        return page("Google rejected the request. Check the OAuth client settings and try again.")
-    return page("Search Console connected. You can close this tab.")
+    except gsc.GscError as exc:
+        raise HTTPException(400, "Google rejected the request. Check the OAuth client settings and try again.") from exc
+    return {"connected": True}
 
 
 @router.post("/gsc/disconnect")
@@ -319,7 +335,10 @@ def delete_monitor(monitor_id: int, user: User = Depends(current_user), db: Sess
 @router.post("/monitors/{monitor_id}/run", status_code=202)
 async def run_monitor_now(monitor_id: int, user: User = Depends(current_user), db: Session = Depends(get_db)) -> dict:
     m = _get_monitor(db, user, monitor_id)
-    return {"job_id": monitoring.start_monitor_job(m.id)}
+    try:
+        return {"job_id": monitoring.start_monitor_job(m.id)}
+    except monitoring.MonitorBusyError as exc:
+        raise HTTPException(409, str(exc)) from exc
 
 
 @router.get("/alerts")
@@ -387,8 +406,12 @@ def write_settings(body: SettingsIn, user: User = Depends(admin_user), db: Sessi
         for k, v in value.items():
             if len(v) > 2048:
                 raise HTTPException(422, f"Value for {key}.{k} is too long")
-            if k.endswith("url") and v and not v.startswith(("http://", "https://")):
-                raise HTTPException(422, f"{key}.{k} must be an http(s) URL")
+            if k.endswith("url") and v:
+                parts = urlsplit(v)
+                if parts.scheme not in ("http", "https") or not parts.hostname:
+                    raise HTTPException(422, f"{key}.{k} must be an http(s) URL")
+                if parts.username or parts.password or parts.query or parts.fragment:
+                    raise HTTPException(422, f"{key}.{k} must not contain credentials, a query string or a fragment")
         set_setting(db, key, value)
     db.commit()
     return read_settings(user, db)

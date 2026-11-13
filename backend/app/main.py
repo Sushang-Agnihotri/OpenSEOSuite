@@ -16,7 +16,8 @@ from fastapi.staticfiles import StaticFiles
 
 from .api import auth, crawls, integrations, sites, tools
 from .config import APP_NAME, APP_VERSION, get_settings
-from .jobs import jobs, mark_interrupted_jobs
+from .jobs import JobLimitError, jobs, mark_interrupted_jobs
+from .security.limits import BodyLimitMiddleware
 from .security.ratelimit import RateLimitMiddleware
 
 log = logging.getLogger("seo.app")
@@ -44,6 +45,8 @@ def configure_logging() -> None:
     root.setLevel(s.log_level.upper())
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("httpcore").setLevel(logging.WARNING)
+    # Our own access log records the path only; uvicorn's would also record query strings (OAuth codes).
+    logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
 
 
 def run_migrations() -> None:
@@ -74,13 +77,28 @@ async def lifespan(app: FastAPI):
     await jobs.shutdown()
 
 
+def _static_file(dist: Path, path: str) -> Path | None:
+    """A file inside the built frontend, or None.
+
+    The request path is vetted *before* the filesystem is touched: on Windows a path such as
+    ``//host/share/x`` or ``\\\\host\\share`` turns into a UNC path, and merely resolving it would make the server
+    open an SMB connection to an attacker-chosen host.
+    """
+    if not path or path.startswith("/") or any(c in path for c in ("\\", ":", "\x00")) or ".." in path.split("/"):
+        return None
+    candidate = (dist / path).resolve()
+    return candidate if candidate.is_file() and dist in candidate.parents else None
+
+
 def create_app() -> FastAPI:
     s = get_settings()
-    app = FastAPI(title=APP_NAME, version=APP_VERSION, lifespan=lifespan, docs_url="/api/docs", redoc_url="/api/redoc",
-                  openapi_url="/api/openapi.json",
+    app = FastAPI(title=APP_NAME, version=APP_VERSION, lifespan=lifespan,
+                  docs_url="/api/docs" if s.enable_api_docs else None, redoc_url="/api/redoc" if s.enable_api_docs else None,
+                  openapi_url="/api/openapi.json" if s.enable_api_docs else None,
                   description="Self-hosted, open-source SEO platform: crawler, technical audit, keyword research, SERP and "
                               "content analysis, Search Console, page speed, monitoring and reporting.")
     app.add_middleware(RateLimitMiddleware)
+    app.add_middleware(BodyLimitMiddleware)  # outermost: oversized bodies are refused before anything reads them
     origins = [o.strip() for o in s.cors_origins.split(",") if o.strip()]
     if origins:
         app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=["*"], allow_headers=["Authorization", "Content-Type"],
@@ -102,6 +120,10 @@ def create_app() -> FastAPI:
         response.headers["X-Request-ID"] = rid
         return response
 
+    @app.exception_handler(JobLimitError)
+    async def job_limit(_request: Request, exc: JobLimitError):
+        return JSONResponse({"detail": str(exc)}, status_code=429, headers={"Retry-After": "30"})
+
     for r in (auth.router, sites.router, crawls.router, tools.router, integrations.router):
         app.include_router(r, prefix="/api")
 
@@ -122,10 +144,8 @@ def create_app() -> FastAPI:
         def spa(path: str):
             if path.startswith("api/"):
                 return JSONResponse({"detail": "Not found"}, status_code=404)
-            candidate = (dist / path).resolve()
-            if path and candidate.is_file() and dist in candidate.parents:
-                return FileResponse(candidate)
-            return FileResponse(dist / "index.html")
+            candidate = _static_file(dist, path)
+            return FileResponse(candidate if candidate else dist / "index.html")
 
     return app
 

@@ -1,11 +1,63 @@
+<p align="center">
+  <img src="docs/assets/banner.svg" alt="Ultimate Open-Source SEO Toolkit: crawl, audit, research and monitor, self-hosted and free" width="100%">
+</p>
+
+<p align="center">
+  <a href="https://github.com/Sushang-Agnihotri/ultimate-open-source-seo-toolkit/actions/workflows/ci.yml"><img src="https://github.com/Sushang-Agnihotri/ultimate-open-source-seo-toolkit/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
+  <img src="https://img.shields.io/badge/license-MIT-green" alt="MIT licence">
+  <img src="https://img.shields.io/badge/python-3.11%2B-blue" alt="Python 3.11+">
+  <img src="https://img.shields.io/badge/node-20%2B-339933" alt="Node 20+">
+  <img src="https://img.shields.io/badge/self--hosted-yes-6366f1" alt="Self-hosted">
+  <img src="https://img.shields.io/badge/paid%20APIs-none%20required-0ea5e9" alt="No paid APIs required">
+  <img src="https://img.shields.io/badge/telemetry-none-64748b" alt="No telemetry">
+</p>
+
+<p align="center">
+  <a href="#quick-start">Quick start</a> ·
+  <a href="#screenshots">Screenshots</a> ·
+  <a href="#features">Features</a> ·
+  <a href="#how-it-compares">How it compares</a> ·
+  <a href="#security">Security</a> ·
+  <a href="docs/ROADMAP.md">Roadmap</a>
+</p>
+
 # Ultimate Open-Source SEO Toolkit
 
 A self-hosted SEO platform you can run for free: site crawler, technical audit, internal-link analysis, keyword research, SERP and
 content analysis, Search Console reporting, page speed, monitoring and exportable reports — in one application, on your own machine.
 
-> **Status: 0.1.0 (first development release).** The crawler, audit engine, exports, monitoring and API are covered by automated tests.
-> Some integrations could not be verified against live third-party services yet. `PROJECT_STATUS.md` lists precisely what is verified
-> and `KNOWN_LIMITATIONS.md` what the tool cannot do.
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/site-audit-dark.png">
+    <img src="docs/screenshots/site-audit.png" alt="Site Audit screen: score, issue counts by severity and issues by category" width="92%">
+  </picture>
+</p>
+
+> **Status: 0.1.0 (first development release).** The crawler, audit engine, exports, monitoring and API are covered by automated tests
+> that run on Linux, Windows and macOS. Some integrations could not be verified against live third-party services yet.
+> `PROJECT_STATUS.md` lists precisely what is verified and `KNOWN_LIMITATIONS.md` what the tool cannot do.
+
+## At a glance
+
+| | |
+|---|---|
+| **95 audit rules** | Four severities, each with an explanation, the affected URLs and a fix |
+| **21 screens** | Light and dark themes, responsive |
+| **95 API operations** | Everything the UI does is scriptable; OpenAPI docs built in |
+| **5 export formats** | PDF, Excel, CSV, JSON and XML sitemap |
+| **0 paid services** | The core works with no accounts or API keys |
+| **One process** | SQLite by default; no Redis, no queue, no separate worker |
+
+## Quick start
+
+```bash
+git clone https://github.com/Sushang-Agnihotri/ultimate-open-source-seo-toolkit.git
+cd ultimate-open-source-seo-toolkit
+docker compose up -d
+```
+
+Open http://localhost:8000, create the first account (it becomes the administrator), add a website and start a crawl.
+No Docker? See [Installation](#installation) for the Python + Node route.
 
 ## Why another SEO tool?
 
@@ -40,8 +92,67 @@ for a paid data API, while the genuinely free tools are single-purpose crawlers.
 
 ## Screenshots
 
-Screenshots live in `docs/screenshots/`. They are captured from a real instance auditing the bundled test website
-(`backend/tests/fixture_site.py`), never from mock data. See that folder's README for how to regenerate them.
+Every capture comes from a real instance auditing the bundled test website (`backend/tests/fixture_site.py`), which contains about
+50 planted SEO problems. Nothing is mocked. Regenerate them with `scripts/capture_screenshots.py`.
+
+| Dashboard | Issue detail: what, why and how to fix |
+|---|---|
+| ![Dashboard with score, crawl totals, score history and HTTP status breakdown](docs/screenshots/dashboard.png) | ![Broken internal links issue with affected URLs, link targets and status codes](docs/screenshots/issue-detail.png) |
+
+| Internal linking | Link graph by crawl depth |
+|---|---|
+| ![Internal link metrics: inlink and depth distributions, orphan pages](docs/screenshots/internal-links-dark.png) | ![Radial link graph with the start page in the centre](docs/screenshots/link-graph-dark.png) |
+
+| Keyword research (live autocomplete) | Monitoring |
+|---|---|
+| ![Keyword suggestions, questions and clusters for a seed keyword](docs/screenshots/keywords.png) | ![Uptime, metadata and sitemap monitors with last status](docs/screenshots/monitoring.png) |
+
+<details>
+<summary><b>More screens</b> (crawler, page report, sitemaps, schema, international, local, content, competitors, backlinks, reports, settings)</summary>
+
+| | |
+|---|---|
+| **Crawler**<br>![Crawler](docs/screenshots/crawler.png) | **Page report**<br>![Page report](docs/screenshots/page-detail.png) |
+| **Sitemaps & indexing**<br>![Sitemaps](docs/screenshots/sitemaps.png) | **Schema markup**<br>![Schema](docs/screenshots/schema.png) |
+| **International SEO**<br>![International](docs/screenshots/international.png) | **Local SEO**<br>![Local](docs/screenshots/local.png) |
+| **Content optimizer**<br>![Content optimizer](docs/screenshots/content-optimizer.png) | **Competitors**<br>![Competitors](docs/screenshots/competitors.png) |
+| **Backlinks**<br>![Backlinks](docs/screenshots/backlinks.png) | **Reports**<br>![Reports](docs/screenshots/reports.png) |
+| **Settings**<br>![Settings](docs/screenshots/settings.png) | **Dashboard (dark)**<br>![Dashboard dark](docs/screenshots/dashboard-dark.png) |
+
+</details>
+
+## How it works
+
+```mermaid
+flowchart LR
+  A[Add a website] --> B[Crawl
+robots.txt · sitemaps · links]
+  B --> C[Audit
+95 rules, page + site level]
+  C --> D[Prioritised issues
+with affected URLs and fixes]
+  D --> E[Reports
+PDF · Excel · CSV · JSON]
+  D --> F[Monitor
+re-crawl, compare, alert]
+  F --> B
+```
+
+## How it compares
+
+| | Commercial suites | Desktop crawlers | **This toolkit** |
+|---|---|---|---|
+| Technical crawl and audit | Yes | Yes | **Yes** |
+| Internal link graph and PageRank | Yes | Yes | **Yes** |
+| Keyword ideas | Own database | No | **Live autocomplete** |
+| Search volume | Own database | No | **Only from Search Console or your imports** |
+| Web-scale backlink index | Yes | No | **No** (imports + live verification) |
+| Competitor traffic estimates | Yes | No | **No** |
+| Scheduled monitoring and alerts | Yes | Partly | **Yes** |
+| Self-hosted, data stays with you | No | Yes | **Yes** |
+| Price | Subscription | Licence | **Free, MIT** |
+
+The full matrix, including where every number comes from, is in `RESEARCH/FEATURE_COMPARISON.md`.
 
 ## Architecture
 
@@ -80,6 +191,7 @@ docker compose up -d
 ```
 
 Open http://localhost:8000 and create the first account (it becomes the administrator). Data is kept in the `seo-data` volume.
+The port is published on this machine only; to reach it from elsewhere put an HTTPS reverse proxy in front (see [Security](#security)).
 
 ### Option B: Manual (Windows, macOS, Linux)
 
@@ -147,7 +259,10 @@ All settings are optional environment variables (prefix `SEO_`), documented in `
 | `SEO_DATA_DIR` | `./data` | SQLite database and generated secret key |
 | `SEO_DATABASE_URL` | SQLite | Set to a PostgreSQL URL to switch database |
 | `SEO_SECRET_KEY` | generated | Token signing key |
-| `SEO_ALLOW_REGISTRATION` | `true` | Close sign-ups after creating your accounts |
+| `SEO_ALLOW_REGISTRATION` | `false` | The first account is always allowed (it becomes the administrator); set `true` to let others sign up |
+| `SEO_TRUSTED_PROXIES` | empty | Reverse-proxy addresses whose `X-Forwarded-For` is believed (needed for correct rate limiting behind a proxy) |
+| `SEO_MAX_JOBS_PER_USER` | `8` | Queued + running background jobs one account may have |
+| `SEO_BIND` | `127.0.0.1` | Docker Compose only: address the port is published on (`0.0.0.0` = all interfaces) |
 | `SEO_ALLOW_PRIVATE_NETWORKS` | `false` | Allow crawling localhost/LAN (disables that part of SSRF protection) |
 | `SEO_PUBLIC_BASE_URL` | `http://localhost:8000` | Used for the Google OAuth redirect URI |
 
@@ -168,6 +283,25 @@ The application contacts only:
 
 There is no telemetry.
 
+## Security
+
+The application fetches attacker-controlled URLs and parses attacker-controlled content, so it was built and reviewed with that in mind.
+The full account (18 findings from the pre-release review, what was fixed, what is accepted) is in
+[`docs/SECURITY_REVIEW.md`](docs/SECURITY_REVIEW.md); the policy and operator checklist are in [`SECURITY.md`](SECURITY.md).
+
+| Area | What protects you |
+|---|---|
+| **Server-side request forgery** | Every connection resolves the hostname itself, refuses private/loopback/link-local/metadata addresses and connects to the vetted IP (defeats DNS rebinding); redirects are checked hop by hop; the optional browser renderer vets every request and disallows redirects |
+| **Denial of service** | No user- or site-supplied regular expressions (linear-time wildcard matching for `robots.txt` and crawl filters); body-size limit before anything is read; overall deadline per request; per-account job cap; links-per-page cap |
+| **Accounts** | Argon2id; per-address and per-account login throttling; first account is the administrator, further sign-ups are closed by default; a password change ends every older session |
+| **Access control** | Every object is owner-scoped (other users get 404); settings and local Lighthouse are administrator-only; tests call every endpoint with no credentials and as a second user |
+| **Web** | Strict Content-Security-Policy, `nosniff`, frame denial, HSTS over HTTPS, Permissions-Policy, no cookies (no CSRF surface); crawled strings never become HTML or non-`http(s)` links |
+| **Search Console OAuth** | `state` is signed, single-use and bound to the account that started the flow |
+| **Supply chain** | `npm audit` clean, scheduled `pip-audit` / `npm audit` / `bandit` workflow, Dependabot, GitHub Actions pinned to commit SHAs |
+
+Not done, and stated plainly: no external penetration test, no per-session revocation, integration secrets are stored unencrypted in the
+database, Python dependencies are not hash-locked. Report problems privately through GitHub's "Report a vulnerability" button.
+
 ## API documentation
 
 Interactive OpenAPI docs are served at `/api/docs` (Swagger UI) and `/api/redoc`; the schema is at `/api/openapi.json`.
@@ -177,8 +311,8 @@ Interactive OpenAPI docs are served at `/api/docs` (Swagger UI) and `/api/redoc`
 ## Testing
 
 ```bash
-cd backend && pip install -e ".[dev]" && pytest -q     # 167 tests: units, security, end-to-end crawl of a flawed test site
-cd frontend && npm test && npm run typecheck
+cd backend && pip install -e ".[dev]" && pytest -q     # 220 tests: units, security, end-to-end crawl of a flawed test site
+cd frontend && npm test && npm run typecheck   # 18 tests
 ```
 
 The backend suite starts a local website containing ~50 planted SEO problems and asserts that each is detected (and that healthy pages

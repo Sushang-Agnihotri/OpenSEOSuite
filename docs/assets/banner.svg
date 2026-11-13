@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 320" width="1280" height="320" role="img" aria-label="Ultimate Open-Source SEO Toolkit: crawl, audit, research and monitor, self-hosted and free">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b1020"/>
+      <stop offset="1" stop-color="#16214a"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#3b6cf6"/>
+      <stop offset="1" stop-color="#22c55e"/>
+    </linearGradient>
+  </defs>
+  <rect width="1280" height="320" rx="20" fill="url(#bg)"/>
+
+  <!-- radial link-graph motif -->
+  <g transform="translate(1040 160)" fill="none" stroke="#3b4a7a" stroke-dasharray="4 6">
+    <circle r="44"/><circle r="84"/><circle r="124"/>
+  </g>
+  <g transform="translate(1040 160)" stroke="#3b4a7a" stroke-width="1.5">
+    <line x1="0" y1="0" x2="38" y2="-22"/><line x1="0" y1="0" x2="-40" y2="18"/><line x1="0" y1="0" x2="10" y2="43"/>
+    <line x1="38" y1="-22" x2="80" y2="-26"/><line x1="-40" y1="18" x2="-72" y2="43"/><line x1="10" y1="43" x2="30" y2="78"/>
+    <line x1="80" y1="-26" x2="110" y2="-57"/><line x1="-72" y1="43" x2="-118" y2="38"/>
+  </g>
+  <g transform="translate(1040 160)">
+    <circle r="13" fill="#3b6cf6"/>
+    <circle cx="38" cy="-22" r="7" fill="#22c55e"/><circle cx="-40" cy="18" r="7" fill="#22c55e"/><circle cx="10" cy="43" r="7" fill="#eab308"/>
+    <circle cx="80" cy="-26" r="6" fill="#22c55e"/><circle cx="-72" cy="43" r="6" fill="#22c55e"/><circle cx="30" cy="78" r="6" fill="#ef4444"/>
+    <circle cx="110" cy="-57" r="5" fill="#22c55e"/><circle cx="-118" cy="38" r="5" fill="#f97316"/>
+  </g>
+
+  <g font-family="Segoe UI, Helvetica, Arial, sans-serif" fill="#ffffff">
+    <text x="64" y="118" font-size="50" font-weight="700">Ultimate Open-Source SEO Toolkit</text>
+    <rect x="64" y="140" width="200" height="6" rx="3" fill="url(#accent)"/>
+    <text x="64" y="194" font-size="25" fill="#c7d2fe">Crawl · Audit · Research · Monitor — on your own machine</text>
+    <text x="64" y="244" font-size="20" fill="#93a3c9">95 audit rules · no paid APIs · no invented numbers · MIT licensed</text>
+  </g>
+</svg>

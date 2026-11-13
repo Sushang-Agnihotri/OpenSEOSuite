@@ -78,13 +78,13 @@ async def complete(cfg: dict, prompt: str, system: str = SYSTEM_PROMPT) -> str:
                 r = await client.post(f"{base}/api/chat", json={"model": cfg.get("model"), "messages": messages, "stream": False,
                                                                  "options": {"temperature": 0.3}})
                 if r.status_code != 200:
-                    raise AIError(f"Ollama error {r.status_code}: {r.text[:300]}")
+                    raise AIError(f"Ollama answered HTTP {r.status_code}")
                 return r.json().get("message", {}).get("content", "").strip()
             if provider == "openai_compatible":
                 r = await client.post(f"{base}/chat/completions", headers={"Authorization": f"Bearer {cfg.get('api_key', '')}"},
                                       json={"model": cfg.get("model"), "messages": messages, "temperature": 0.3})
                 if r.status_code != 200:
-                    raise AIError(f"AI API error {r.status_code}: {r.text[:300]}")
+                    raise AIError(f"The AI API answered HTTP {r.status_code}")
                 return r.json()["choices"][0]["message"]["content"].strip()
     except httpx.HTTPError as exc:
         raise AIError(f"Could not reach the AI provider: {exc}") from exc

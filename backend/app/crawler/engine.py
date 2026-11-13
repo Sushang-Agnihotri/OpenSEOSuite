@@ -16,6 +16,7 @@ from ..db import session_scope
 from ..jobs import JobContext
 from ..models import Crawl, Issue, Link, Page, utcnow
 from .fetcher import REDIRECT_CODES, Fetcher, FetchResult
+from .globmatch import pattern_search
 from .parser import ParsedPage, parse_html
 from .robots import RobotsRules
 from .sitemaps import SitemapReport, discover_sitemaps
@@ -47,11 +48,14 @@ class CrawlConfig(BaseModel):
 
     @field_validator("include_patterns", "exclude_patterns")
     @classmethod
-    def _valid_regex(cls, v: list[str]) -> list[str]:
+    def _valid_patterns(cls, v: list[str]) -> list[str]:
+        """Patterns are plain text with ``*`` wildcards and optional ``^`` / ``$`` anchors (never regular
+        expressions: a hostile expression could freeze the server)."""
         for p in v:
             if len(p) > 200:
                 raise ValueError("pattern too long")
-            re.compile(p)
+            if not p.strip() or any(ord(ch) < 32 for ch in p):
+                raise ValueError("pattern is empty or contains control characters")
         return v
 
     @field_validator("max_urls")
@@ -87,17 +91,17 @@ class Crawler:
         self.image_urls: dict[str, None] = {}
         self.site_checks: dict = {}
         self.renderer = None
-        self._include = [re.compile(p) for p in self.cfg.include_patterns]
-        self._exclude = [re.compile(p) for p in self.cfg.exclude_patterns]
+        self._include = list(self.cfg.include_patterns)
+        self._exclude = list(self.cfg.exclude_patterns)
 
     # ------------------------------------------------------------------ scope / robots
     def in_scope(self, url: str) -> bool:
         return self.scope.contains(url) or strip_www(urlsplit(url).hostname or "") in self.extra_hosts
 
     def _wanted(self, url: str) -> bool:
-        if self._exclude and any(p.search(url) for p in self._exclude):
+        if self._exclude and any(pattern_search(p, url) for p in self._exclude):
             return False
-        return not self._include or any(p.search(url) for p in self._include) or url == self.start_url
+        return not self._include or any(pattern_search(p, url) for p in self._include) or url == self.start_url
 
     async def robots_for(self, url: str) -> RobotsRules:
         p = urlsplit(url)

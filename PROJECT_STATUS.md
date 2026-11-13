@@ -1,6 +1,6 @@
 # Project Status
 
-Last updated: 2026-11-12 · Version 0.1.0 (pre-release, not yet published)
+Last updated: 2026-11-13 · Version 0.1.0 (pre-release, not yet published)
 
 This file separates what has been **verified** from what is **implemented but unverified** and what is **not done**. Keep it honest.
 
@@ -19,11 +19,11 @@ This file separates what has been **verified** from what is **implemented but un
 | I | Content optimisation and AI | Done; AI providers unverified against a live model |
 | J | Search Console and PageSpeed integrations | Implemented; live calls unverified (see below) |
 | K | Monitoring and reporting | Done, tested |
-| L | Security, testing, optimisation, release | Tests and security checks done; Docker image builds and starts in CI; pushed to a private GitHub repository; public release pending |
+| L | Security, testing, optimisation, release | Security review done and findings fixed (`docs/SECURITY_REVIEW.md`); Docker image builds and starts in CI; pushed to a private GitHub repository; public release pending |
 
 ## Verification record
 
-### Verified by automated tests (167 backend tests, 11 frontend tests, all passing on Windows 11 / Python 3.11 / Node 20)
+### Verified by automated tests (220 backend tests, 18 frontend tests, all passing on Windows 11 / Python 3.11 / Node 20)
 
 - Crawl of a local website with ~50 planted problems: each expected rule fires on the expected URL, and healthy pages are not flagged.
 - Redirect chains/loops, broken internal/external links, broken and oversized images, duplicates and near-duplicates, canonicals,
@@ -36,6 +36,8 @@ This file separates what has been **verified** from what is **implemented but un
   generator, SERP analysis in manual-URL mode, backlink import + live verification, competitor crawl + comparison.
 - Search Console **CSV import**, performance report and insights (declines, new queries, opportunities, cannibalisation).
 - Monitors (uptime, metadata change, sitemap change, scheduled audit) and alerts.
+- Security (pre-release review, `docs/SECURITY_REVIEW.md`): linear-time matching under hostile `robots.txt`/patterns, body-size and deadline
+  limits, OAuth state binding, password-change session invalidation, job caps, safe links, headers, browser-renderer redirect refusal.
 - Security: SSRF policy (24 hostile URL forms), connect-time address checks incl. simulated DNS rebinding, redirect following,
   response-size limits, Argon2id hashing, every endpoint rejects unauthenticated calls, cross-user isolation, admin-only settings,
   secret masking, injection payloads, upload type/size limits, login rate limiting, security headers.
@@ -65,12 +67,14 @@ This file separates what has been **verified** from what is **implemented but un
 | AI providers (Ollama, OpenAI-compatible) | No model server available | Prompt construction is tested; HTTP calls are not |
 | PostgreSQL | Only SQLite was run | Possible dialect differences |
 | Docker Compose / container in real use | CI builds the image and checks `/api/health` only. `docker compose up`, the data volume, and using the UI or running a crawl inside the container have not been tried (Docker cannot start on the development machine: WSL service disabled). | Volume permissions or crawl behaviour inside the container could still surprise |
-| Frontend interactions | Screens were loaded and checked for errors; forms/buttons on most screens were not clicked through one by one | UI bugs in less common flows are likely |
+| Frontend interactions | Screens were loaded and checked for errors; forms/buttons on most screens were not clicked through one by one. The Search Console return flow was checked in the browser only with an invalid state | UI bugs in less common flows are likely |
+| New hardening settings in Docker | `docker-compose.yml` now drops capabilities, sets `no-new-privileges` and binds `127.0.0.1`; CI runs `docker compose up` for the first time on the next push, nothing has been run locally | A Compose option could break startup on some engines |
+| External penetration test | Not done; the review was code reading, scanners and regression tests | Unknown issues may remain |
 
 ### Not implemented
 
 See `KNOWN_LIMITATIONS.md` ("Not implemented") and `docs/ROADMAP.md`: log-file analysis, Bing Webmaster Tools, Google Analytics,
-Google Trends, Google Business Profile, notifications by e-mail/webhook, URL Inspection, batch page-speed runs, screenshots in the README.
+Google Trends, Google Business Profile, notifications by e-mail/webhook, URL Inspection, batch page-speed runs.
 
 ## Release acceptance criteria
 
@@ -86,13 +90,13 @@ Google Trends, Google Business Profile, notifications by e-mail/webhook, URL Ins
 | 8 | Issues are correctly categorised | **Verified** by tests |
 | 9 | Reports can be exported | **Verified** |
 | 10 | Core modules have automated tests | **Verified** |
-| 11 | Security checks completed | **Verified** by tests; no external penetration test |
-| 12 | Documentation complete | **Mostly**: screenshots missing |
+| 11 | Security checks completed | **Verified** by review, scanners and tests (`docs/SECURITY_REVIEW.md`); no external penetration test |
+| 12 | Documentation complete | **Yes**: README with 23 real screenshots, security review, architecture, API and limitations documents |
 | 13 | Docker deployment works | **Partly verified**: image builds and serves the health endpoint in CI; `docker compose up` not run |
 | 14 | No critical errors remain | None known; UI flows only partly exercised |
 | 15 | Works without paid API subscriptions | **Verified** |
 
-**Conclusion: not ready for a public release yet.** Criterion 12 is open and 13 is only partly verified, and the unverified integrations above should be
+**Conclusion: not ready for a public release yet.** Criterion 13 is only partly verified, and the unverified integrations above should be
 exercised (or clearly marked experimental in the UI) first.
 
 ## Next steps
@@ -101,4 +105,4 @@ exercised (or clearly marked experimental in the UI) first.
 2. Click through every form in the UI; add frontend tests for the main flows.
 3. Verify PageSpeed (with a free API key), Search Console OAuth, one SERP provider and Ollama.
 4. Crawl a few real public sites of different sizes; tune defaults.
-5. Add screenshots, then make the GitHub repository public.
+5. Confirm the new CI runs (security workflow, `docker compose` smoke test) are green, then make the GitHub repository public.

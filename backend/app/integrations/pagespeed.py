@@ -3,7 +3,10 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
+import os
 import shutil
+from urllib.parse import urlsplit
 
 import httpx
 
@@ -141,6 +144,10 @@ async def run_psi(url: str, strategy: str = "mobile", api_key: str = "") -> dict
     return out
 
 
+log = logging.getLogger("seo.pagespeed")
+_lighthouse_slot = asyncio.Semaphore(1)
+
+
 def lighthouse_path() -> str | None:
     return shutil.which("lighthouse")
 
@@ -152,22 +159,31 @@ async def run_local_lighthouse(url: str, strategy: str = "mobile", timeout_s: in
         raise RuntimeError("Lighthouse CLI not found. Install Node.js and run: npm install -g lighthouse")
     s = get_settings()
     validate_url(url, s.allow_private_networks)
-    from urllib.parse import urlsplit
     parts = urlsplit(url)
     await resolve_and_check(parts.hostname or "", parts.port or (443 if parts.scheme == "https" else 80), s.allow_private_networks)
-    args = [exe, url, "--output=json", "--quiet", "--chrome-flags=--headless=new --no-sandbox",
+    # Chrome refuses to start as root without --no-sandbox (containers); everywhere else keep its sandbox on.
+    flags = "--headless=new" + (" --no-sandbox" if hasattr(os, "geteuid") and os.geteuid() == 0 else "")
+    args = [exe, url, "--output=json", "--quiet", f"--chrome-flags={flags}",
             "--only-categories=performance,accessibility,best-practices,seo"]
     if strategy == "desktop":
         args.append("--preset=desktop")
-    proc = await asyncio.create_subprocess_exec(*args, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
-    try:
-        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout_s)
-    except TimeoutError:
-        proc.kill()
-        raise RuntimeError("Local Lighthouse run timed out") from None
+    async with _lighthouse_slot:  # a full Chrome per run: never more than one at a time
+        proc = await asyncio.create_subprocess_exec(*args, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+        try:
+            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout_s)
+        except TimeoutError:
+            proc.kill()
+            raise RuntimeError("Local Lighthouse run timed out") from None
     if proc.returncode != 0 or not stdout.strip():
-        raise RuntimeError(f"Lighthouse failed: {stderr.decode('utf-8', 'replace')[-400:]}")
-    out = parse_lighthouse(json.loads(stdout))
+        log.warning("lighthouse failed: %s", stderr.decode("utf-8", "replace")[-400:])
+        raise RuntimeError("Lighthouse failed. See the server log for details.")
+    report = json.loads(stdout)
+    # Chrome follows redirects on its own: refuse results from a page that ended up somewhere non-public.
+    final = report.get("finalDisplayedUrl") or report.get("finalUrl") or url
+    validate_url(final, s.allow_private_networks)
+    fparts = urlsplit(final)
+    await resolve_and_check(fparts.hostname or "", fparts.port or (443 if fparts.scheme == "https" else 80), s.allow_private_networks)
+    out = parse_lighthouse(report)
     out["source"] = "local_lighthouse"
     out["strategy"] = strategy
     return out

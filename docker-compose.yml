@@ -1,5 +1,6 @@
 # Default: one container with a SQLite database in a named volume.
-#   docker compose up -d            -> http://localhost:8000
+#   docker compose up -d            -> http://localhost:8000 (published on this machine only)
+# To reach it from other machines put an HTTPS reverse proxy in front, or set SEO_BIND=0.0.0.0 in .env.
 # Optional PostgreSQL:
 #   docker compose --profile postgres up -d
 #   and set SEO_DATABASE_URL in .env (see .env.example)
@@ -9,7 +10,11 @@ services:
     image: ultimate-open-source-seo-toolkit:latest
     restart: unless-stopped
     ports:
-      - "${SEO_PORT:-8000}:8000"
+      - "${SEO_BIND:-127.0.0.1}:${SEO_PORT:-8000}:8000"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     env_file:
       - path: .env
         required: false

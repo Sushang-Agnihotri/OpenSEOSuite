@@ -64,8 +64,8 @@ export function CrawlConfigForm({ value, onChange, advanced = false }: { value: 
         {flag("render_js", "Render JavaScript", "Needs Playwright installed on the server. Much slower.")}
       </div>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {patterns("include_patterns", "Include patterns", "Regex, one per line. If set, only matching URLs are crawled (max 20).", "^https://example\\.com/blog/")}
-        {patterns("exclude_patterns", "Exclude patterns", "Regex, one per line. Matching URLs are skipped (max 20).", "\\?sort=\n/cart")}
+        {patterns("include_patterns", "Include patterns", "One per line, plain text. * matches anything, ^ anchors the start, $ the end. If set, only matching URLs are crawled (max 20).", "^https://example.com/blog/")}
+        {patterns("exclude_patterns", "Exclude patterns", "One per line, plain text. * matches anything, ^ anchors the start, $ the end. Matching URLs are skipped (max 20).", "?sort=\n/cart\n.pdf$")}
       </div>
       {advanced && (
         <Field label="User agent" hint="Leave empty to use the toolkit's default crawler user agent.">

@@ -3,17 +3,20 @@ from __future__ import annotations
 
 import csv
 import io
+import secrets
 import time
 from collections import defaultdict
 from datetime import date, datetime, timedelta
 from urllib.parse import quote, urlencode
 
 import httpx
+from fastapi import HTTPException
 from sqlalchemy import delete, func, insert, select
 from sqlalchemy.orm import Session
 
 from ..config import get_settings
 from ..models import GscRow
+from ..security.auth import create_access_token, decode_payload
 from ..services.settings_store import get_private, get_setting, set_private
 
 AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
@@ -26,6 +29,42 @@ EXPECTED_CTR = {1: 0.28, 2: 0.15, 3: 0.10, 4: 0.07, 5: 0.05, 6: 0.04, 7: 0.03, 8
 
 class GscError(RuntimeError):
     pass
+
+
+class GscForbidden(GscError):
+    """The authorisation was started by a different account (or was already used)."""
+
+
+# One-time nonces of OAuth flows in progress: nonce -> (user id, expiry). In memory is enough: a restart only
+# means the person clicks "Connect" again.
+_pending: dict[str, tuple[int, float]] = {}
+STATE_MINUTES = 15
+
+
+def issue_state(user_id: int) -> str:
+    now = time.time()
+    for nonce in [n for n, (_u, exp) in _pending.items() if exp < now]:
+        _pending.pop(nonce, None)
+    if len(_pending) > 1000:
+        _pending.pop(next(iter(_pending)), None)
+    nonce = secrets.token_urlsafe(16)
+    _pending[nonce] = (user_id, now + STATE_MINUTES * 60)
+    return create_access_token(user_id, purpose="gsc_oauth", minutes=STATE_MINUTES, nonce=nonce)
+
+
+def consume_state(state: str, user_id: int) -> None:
+    """Accept ``state`` only for the account that requested it, and only once.
+
+    The Google redirect carries no credentials of its own, so without this check anyone could send a victim
+    their own consent link and have the victim's Google access stored under the sender's account.
+    """
+    try:
+        payload = decode_payload(state, purpose="gsc_oauth")
+    except HTTPException as exc:  # not a 401: that would sign the person out of the app for a bad link
+        raise GscForbidden("This Google authorisation link is not valid. Start the connection again.") from exc
+    entry = _pending.pop(str(payload.get("nonce", "")), None)
+    if entry is None or entry[1] < time.time() or entry[0] != user_id or int(payload["sub"]) != user_id:
+        raise GscForbidden("This Google authorisation was not started by your account, or it has expired. Start the connection again.")
 
 
 def redirect_uri() -> str:

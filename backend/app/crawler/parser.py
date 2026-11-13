@@ -20,6 +20,7 @@ _DROP_ALWAYS = ("script", "style", "noscript", "template", "svg", "iframe", "hea
 _BOILERPLATE = ("nav", "header", "footer", "aside", "form")
 _INLINE = {"b", "i", "em", "strong", "span", "u", "s", "sup", "sub", "small", "mark", "code", "abbr", "font", "wbr"}
 MAX_TEXT_CHARS = 60_000
+MAX_LINKS_PER_PAGE = 5_000  # a hostile page must not be able to store millions of link rows
 
 
 @dataclass
@@ -217,7 +218,7 @@ def parse_html(body: bytes, url: str, content_type_header: str = "") -> ParsedPa
                 page.canonical_raw = href
                 page.canonical = normalize_url(href or "", base)
         if "alternate" in rels and link.get("hreflang") and href:
-            page.hreflang.append({"lang": link.get("hreflang").strip(), "href": normalize_url(href, base) or href})
+            page.hreflang.append({"lang": link.get("hreflang").strip()[:35], "href": normalize_url(href, base) or href[:300]})
         if "next" in rels and href:
             page.rel_next = normalize_url(href, base)
         if "prev" in rels and href:
@@ -244,6 +245,8 @@ def parse_html(body: bytes, url: str, content_type_header: str = "") -> ParsedPa
             img = a.find(".//img")
             if img is not None:
                 anchor = clean(img.get("alt"))
+        if len(page.links) >= MAX_LINKS_PER_PAGE:
+            break
         rel = (a.get("rel") or "").lower().split()
         page.links.append({
             "url": target, "anchor": anchor[:300],
@@ -314,7 +317,7 @@ def parse_html(body: bytes, url: str, content_type_header: str = "") -> ParsedPa
     page.text = main_text[:MAX_TEXT_CHARS]
     page.word_count = len(words)
     if words:
-        page.content_hash = hashlib.sha1(" ".join(words).encode("utf-8")).hexdigest()
+        page.content_hash = hashlib.sha1(" ".join(words).encode("utf-8"), usedforsecurity=False).hexdigest()
         page.simhash = simhash64(words)
     page.text_ratio = round(len(main_text) / max(len(body), 1), 4)
     return page

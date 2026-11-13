@@ -24,6 +24,8 @@ STRICT_PORTS = {80, 443, 8080, 8443}
 _INTERNAL_SUFFIXES = (".localhost", ".local", ".internal", ".intranet", ".lan", ".home.arpa", ".corp")
 _NAT64 = ipaddress.ip_network("64:ff9b::/96")
 _SIXTOFOUR = ipaddress.ip_network("2002::/16")
+_IPV4_COMPATIBLE = ipaddress.ip_network("::/96")  # deprecated ::a.b.c.d form
+_SITE_LOCAL = ipaddress.ip_network("fec0::/10")  # deprecated, never globally routable
 
 
 class UnsafeURLError(ValueError):
@@ -53,6 +55,8 @@ def is_ip_allowed(ip_text: str, allow_private: bool = False) -> bool:
         return False
     if allow_private:
         return True
+    if isinstance(ip, ipaddress.IPv6Address) and (ip in _IPV4_COMPATIBLE or ip in _SITE_LOCAL):
+        return False  # Python's is_global still says True for these deprecated ranges
     return ip.is_global
 
 

@@ -23,8 +23,8 @@ jobs:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: ${{ matrix.python }}
           cache: pip
@@ -38,8 +38,8 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 20
           cache: npm
@@ -53,7 +53,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [backend, frontend]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - run: docker build -t seo-toolkit:ci .
       - name: Smoke test the image
         run: |
@@ -63,4 +63,15 @@ jobs:
             sleep 2
           done
           docker logs seo
+          exit 1
+      - name: Smoke test docker compose
+        run: |
+          docker rm -f seo
+          docker compose up -d --build
+          for i in $(seq 1 45); do
+            if curl -fsS http://127.0.0.1:8000/api/health; then docker compose down -v; exit 0; fi
+            sleep 2
+          done
+          docker compose logs
+          docker compose down -v
           exit 1

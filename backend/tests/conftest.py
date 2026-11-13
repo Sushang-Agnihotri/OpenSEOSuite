@@ -11,6 +11,7 @@ os.environ.update({
     "SEO_DATABASE_URL": "",
     "SEO_ALLOW_PRIVATE_NETWORKS": "true",  # the fixture site runs on 127.0.0.1
     "SEO_SCHEDULER_ENABLED": "false",
+    "SEO_ALLOW_REGISTRATION": "true",  # the isolation tests need a second account
     "SEO_LOGIN_RATE_LIMIT_PER_MINUTE": "1000",
     "SEO_API_RATE_LIMIT_PER_MINUTE": "100000",
     "SEO_SECRET_KEY": "test-secret-key-that-is-long-enough-for-hs256",
