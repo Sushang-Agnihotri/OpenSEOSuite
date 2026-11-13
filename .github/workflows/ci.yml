@@ -85,3 +85,37 @@ jobs:
           cat /tmp/compose-state.log
           docker compose down -v
           exit 1
+      - name: Smoke test docker compose with PostgreSQL
+        shell: bash
+        run: |
+          note() { echo "::error title=$1::$(paste -sd' ' "$2" | cut -c1-1800)"; }
+          PW=$(openssl rand -hex 16)
+          printf 'POSTGRES_PASSWORD=%s\nSEO_DATABASE_URL=postgresql+psycopg://seotoolkit:%s@postgres:5432/seotoolkit\nSEO_ALLOW_REGISTRATION=true\n' "$PW" "$PW" > .env
+          C="docker compose -f docker-compose.yml -f docker-compose.postgres.yml"
+          if ! $C up -d --build > /tmp/pg-up.log 2>&1; then
+            note "postgres compose up failed" /tmp/pg-up.log
+            cat /tmp/pg-up.log
+            exit 1
+          fi
+          ok=0
+          for i in $(seq 1 45); do
+            if curl -fsS http://127.0.0.1:8000/api/health; then ok=1; break; fi
+            sleep 2
+          done
+          if [ "$ok" != 1 ]; then
+            $C ps -a > /tmp/pg-state.log 2>&1
+            $C logs --no-color --tail 40 >> /tmp/pg-state.log 2>&1
+            note "postgres compose never became healthy" /tmp/pg-state.log
+            cat /tmp/pg-state.log
+            exit 1
+          fi
+          # A write through the API proves the migrations and the ORM work on PostgreSQL, not just that the process started.
+          if ! curl -fsS -X POST http://127.0.0.1:8000/api/auth/register -H 'Content-Type: application/json' \
+               -d '{"email":"ci@example.com","password":"correct horse battery"}' > /tmp/pg-register.log 2>&1; then
+            $C logs --no-color --tail 40 app >> /tmp/pg-register.log 2>&1
+            note "register against PostgreSQL failed" /tmp/pg-register.log
+            exit 1
+          fi
+          $C exec -T postgres psql -U seotoolkit -d seotoolkit -tAc "select count(*) from users"
+          $C down -v
+          rm -f .env

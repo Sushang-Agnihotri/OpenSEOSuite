@@ -1,0 +1,36 @@
+# Optional: run the app against PostgreSQL instead of SQLite. Layer this file on top of docker-compose.yml:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.postgres.yml up -d
+#
+# and put these two lines in .env (see .env.example):
+#   POSTGRES_PASSWORD=<a long random password>
+#   SEO_DATABASE_URL=postgresql+psycopg://seotoolkit:<the same password>@postgres:5432/seotoolkit
+#
+# It is a separate file on purpose: Compose resolves ${VAR:?...} for every service in a file, even ones that are not
+# started, so keeping the required password here means a plain `docker compose up -d` needs no .env at all.
+services:
+  app:
+    build:
+      args:
+        PIP_EXTRAS: "[postgres]" # installs the PostgreSQL driver into the image
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: seotoolkit
+      POSTGRES_USER: seotoolkit
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      - seo-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U seotoolkit -d seotoolkit"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+volumes:
+  seo-postgres:

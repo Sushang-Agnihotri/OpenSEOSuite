@@ -12,9 +12,10 @@ FROM python:3.12-slim AS runtime
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 \
     SEO_DATA_DIR=/data SEO_FRONTEND_DIST=/app/frontend/dist
 WORKDIR /app/backend
+ARG PIP_EXTRAS=""
 COPY backend/pyproject.toml ./
 COPY backend/app ./app
-RUN pip install .
+RUN pip install ".${PIP_EXTRAS}"
 COPY backend/alembic ./alembic
 COPY backend/alembic.ini ./
 COPY --from=frontend /build/dist /app/frontend/dist
